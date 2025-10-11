@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatDialog } from '@angular/material/dialog';
+import { UserPermissionsDialogComponent } from '../user-permissions-dialog/user-permissions-dialog.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -159,7 +160,10 @@ import { UserDialogComponent, UserDialogData } from '../user-dialog/user-dialog.
               <td mat-cell *matCellDef="let user" style="padding:4px 12px">
                 <div class="school-chips" *ngIf="user.schools && user.schools.length > 0; else noSchool">
                   <span *ngFor="let school of user.schools" class="school-chip">
-                    {{ school.name }}
+                    <span class="school-name">{{ school.name }}</span>
+                    <button mat-icon-button class="perm-btn" aria-label="Yetkileri Yönet" (click)="openPermissionsForSchool(user, school)" matTooltip="Yetkileri Yönet">
+                      <mat-icon fontSet="material-symbols-outlined">security</mat-icon>
+                    </button>
                   </span>
                 </div>
                 <ng-template #noSchool>
@@ -191,6 +195,12 @@ import { UserDialogComponent, UserDialogData } from '../user-dialog/user-dialog.
                   </svg>
                 </button>
                 <mat-menu #actionMenu="matMenu">
+                  <button mat-menu-item (click)="openPermissions(user)">
+                    <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M12 2a7 7 0 100 14 7 7 0 000-14zm0 2a5 5 0 110 10 5 5 0 010-10zM2 20v2h20v-2H2z" fill="currentColor"/>
+                    </svg>
+                    <span>Yetkiler</span>
+                  </button>
                   <button mat-menu-item (click)="openUserDialog(user)">
                     <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" fill="currentColor"/>
@@ -290,6 +300,10 @@ import { UserDialogComponent, UserDialogData } from '../user-dialog/user-dialog.
   /* Removed technician and user roles */
     .school-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .school-chip { padding: 0.2rem 0.6rem; border-radius: 8px; background-color: #eee; font-size: 0.8rem; }
+  .perm-btn { margin-left: 6px; vertical-align: middle; width: 36px; height: 36px; min-width: 36px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg,#1976d2 0%,#42a5f5 100%); color: white; box-shadow: 0 2px 6px rgba(25,118,210,0.12); transition: transform .12s ease, box-shadow .12s ease; }
+  .perm-btn mat-icon { font-size: 20px; color: white; }
+  .perm-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(25,118,210,0.18); }
+  .perm-btn:focus { outline: 2px solid rgba(66,165,245,0.35); outline-offset: 2px; }
     .no-assignment { color: #999; font-style: italic; font-size: 0.85rem; }
     .delete-action { color: #f44336 !important; }
 
@@ -565,6 +579,63 @@ export class UserListComponent implements OnInit, OnDestroy {
     } else if (newPassword) {
       this.showError('Şifre en az 6 karakter olmalıdır.');
     }
+  }
+
+  openPermissions(user: User): void {
+    // Determine selected school context
+    const selectedSchool = this.authService.getSelectedSchool();
+    let schoolEntry: any = null;
+    if (selectedSchool) {
+      schoolEntry = (user.schools || []).find(s => s.id === selectedSchool.id);
+    } else {
+      // fallback to first school (if any)
+      schoolEntry = (user.schools || [])[0];
+    }
+
+    if (!schoolEntry) {
+      this.showError('Bu kullanıcı için atlı bir okul bulunamadı.');
+      return;
+    }
+
+    // Sequelize may attach join data as 'UserSchool' or as 'UserSchool' under different names.
+    const join = (schoolEntry as any).UserSchool || (schoolEntry as any).assignment || (schoolEntry as any).user_school || null;
+    const userSchoolsId = join?.id;
+    if (!userSchoolsId) {
+      this.showError('Kullanıcının okul ataması bilgisi bulunamadı.');
+      return;
+    }
+
+    const dialogRef = this.dialog.open(UserPermissionsDialogComponent, {
+      width: '600px',
+      data: { userSchoolsId, userName: user.name, schoolName: schoolEntry.name }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && result.saved) {
+        this.showSuccess('Yetki atamaları kaydedildi.');
+      }
+    });
+  }
+
+  openPermissionsForSchool(user: User, school: any): void {
+    // find join id
+    const join = (school as any).UserSchool || (school as any).assignment || (school as any).user_school || null;
+    const userSchoolsId = join?.id;
+    if (!userSchoolsId) {
+      this.showError('Kullanıcının okul ataması bilgisi bulunamadı.');
+      return;
+    }
+
+    const dialogRef = this.dialog.open(UserPermissionsDialogComponent, {
+      width: '600px',
+      data: { userSchoolsId, userName: user.name, schoolName: school.name }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && result.saved) {
+        this.showSuccess('Yetki atamaları kaydedildi.');
+      }
+    });
   }
 
   deleteUser(user: User): void {

@@ -36,6 +36,10 @@ import { apiBase } from '../runtime-config';
             <span class="material-symbols-outlined action-icon" aria-hidden="true">engineering</span>
             Teknisyenler
           </button>
+          <button mat-raised-button routerLink="/school-employees" class="action-btn people-btn">
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">people</span>
+            Personel Yönetimi
+          </button>
           <button mat-raised-button routerLink="/locations" class="action-btn success-btn">
               <span class="material-symbols-outlined action-icon" aria-hidden="true">location_on</span>
             Lokasyonlar

@@ -10,11 +10,10 @@ exports.getAllUsers = async (req, res) => {
       include: [
         {
           model: School,
-          as: 'schools', // 'schools' olarak değiştirildi
+          as: 'schools',
           attributes: ['id', 'name', 'code'],
           through: { 
-            attributes: ['is_primary', 'assigned_at'],
-            as: 'assignment'
+            attributes: ['id','is_primary', 'assigned_at']
           }
         }
       ],
@@ -36,11 +35,10 @@ exports.getUserById = async (req, res) => {
       include: [
         {
           model: School,
-          as: 'schools', // 'schools' olarak değiştirildi
+          as: 'schools',
           attributes: ['id', 'name', 'code'],
           through: { 
-            attributes: ['is_primary', 'assigned_at'],
-            as: 'assignment'
+            attributes: ['id','is_primary', 'assigned_at']
           }
         }
       ]
@@ -280,8 +278,7 @@ exports.getUsersBySchool = async (req, res) => {
           where: { id: school_id }, // Filtreleme burada yapılır
           required: true, // Sadece bu okula atanmış kullanıcıları getir (INNER JOIN)
           through: { 
-            attributes: ['is_primary'],
-            as: 'assignment'
+            attributes: ['id','is_primary']
           }
         }
       ],

@@ -63,6 +63,11 @@ export const routes: Routes = [
         data: { role: 'super_admin' }
       },
       {
+        path: 'employee-types',
+        loadComponent: () => import('./employee-type-page/employee-type-page.component').then(m => m.EmployeeTypePageComponent),
+        data: { role: 'super_admin' }
+      },
+      {
         path: 'operation-types',
         loadComponent: () => import('./operation-type-list/operation-type-list.component').then(m => m.OperationTypeListComponent),
         data: { role: 'super_admin' }
@@ -93,6 +98,11 @@ export const routes: Routes = [
       {
         path: 'technicians',
         loadComponent: () => import('./technician-list/technician-list.component').then(m => m.TechnicianListComponent),
+        data: { requiresSchool: true }
+      },
+      {
+        path: 'school-employees',
+        loadComponent: () => import('./school-employees/school-employees.component').then(m => m.SchoolEmployeesComponent),
         data: { requiresSchool: true }
       },
       {

@@ -73,6 +73,18 @@ app.use('/api/global-settings', globalSettingRouter);
 const permissionRouter = require('./routes/permissionRoutes');
 app.use('/api/permissions', permissionRouter);
 
+// User permissions per user-school
+const userPermissionRouter = require('./routes/userPermissionRoutes');
+app.use('/api/user-permissions', userPermissionRouter);
+
+// Employee types (super_admin managed)
+const employeeTypeRouter = require('./routes/employeeTypeRoutes');
+app.use('/api/employee-types', employeeTypeRouter);
+
+// School employees (per-school CRUD)
+const schoolEmployeeRouter = require('./routes/schoolEmployeeRoutes');
+app.use('/api/school-employees', schoolEmployeeRouter);
+
 // Report routes
 const reportRouter = require('./routes/report');
 app.use('/api/reports', reportRouter);

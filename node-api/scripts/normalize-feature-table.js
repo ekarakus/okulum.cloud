@@ -2,7 +2,8 @@
 // If an uppercase 'Features' table exists, it will copy data into 'features' and drop the old table.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const mysql = require('mysql2/promise');
-const config = require('../../config');
+// load local config from node-api/config.js
+const config = require('../config');
 
 async function run() {
   const conn = await mysql.createConnection({
@@ -14,9 +15,8 @@ async function run() {
   });
 
   try {
-    console.log('Checking for feature tables...');
-    const [rows] = await conn.query("SHOW TABLES LIKE 'features' OR SHOW TABLES LIKE 'Features';");
-    // Use information_schema to detect exact names
+  console.log('Checking for feature tables...');
+  // Use information_schema to detect exact names
     const [found] = await conn.query(
       `SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ? AND (TABLE_NAME = 'features' OR TABLE_NAME = 'Features')`,
       [config.db.database]

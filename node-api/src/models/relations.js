@@ -10,7 +10,10 @@ const Feature = require('./feature');
 const DeviceFeature = require('./deviceFeature');
 const School = require('./school');
 const UserSchool = require('./userSchool');
+const UserPermission = require('./userPermission');
 const Permission = require('./permission');
+const EmployeeType = require('./employeeType');
+const SchoolEmployee = require('./schoolEmployee');
 
 // İlişkiler
 Location.hasMany(Device, { foreignKey: 'location_id', as: 'Location' });
@@ -82,6 +85,13 @@ UserSchool.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
 UserSchool.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 User.hasMany(UserSchool, { foreignKey: 'user_id', as: 'UserSchools' });
 School.hasMany(UserSchool, { foreignKey: 'school_id', as: 'UserSchools' });
+// School employees
+School.hasMany(SchoolEmployee, { foreignKey: 'school_id', as: 'Employees' });
+SchoolEmployee.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
+
+// EmployeeType relations
+EmployeeType.hasMany(SchoolEmployee, { foreignKey: 'employee_type_id', as: 'Employees' });
+SchoolEmployee.belongsTo(EmployeeType, { foreignKey: 'employee_type_id', as: 'EmployeeType' });
 
 module.exports = {
   sequelize,
@@ -97,5 +107,8 @@ module.exports = {
   DeviceFeature,
   School,
   UserSchool,
+  UserPermission,
   Permission,
+  EmployeeType,
+  SchoolEmployee,
 };

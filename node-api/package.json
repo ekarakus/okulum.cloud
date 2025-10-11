@@ -5,7 +5,10 @@
   "scripts": {
     "start": "node src/app.js",
     "db:sync": "node scripts/sync-permissions.js",
-    "db:normalize-features": "node scripts/normalize-feature-table.js",
+  "db:normalize-features": "node scripts/normalize-feature-table.js",
+  "db:sync-user-permissions": "node scripts/sync-user-permissions.js",
+  "db:sync-employee-types": "node scripts/sync-employee-types.js",
+  "db:sync-school-employees": "node scripts/sync-school-employees.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
