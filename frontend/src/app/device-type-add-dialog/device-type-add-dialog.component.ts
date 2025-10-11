@@ -24,7 +24,7 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
   template: `
   <h2 mat-dialog-title>{{ isEdit ? 'Demirbaş Tipi Düzenle' : 'Yeni Demirbaş Tipi Ekle' }}</h2>
     <mat-dialog-content>
-      <form [formGroup]="form">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" (keydown.enter)="onFormEnter($event)">
         <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;">
           <mat-label>Demirbaş Tipi Adı</mat-label>
           <input matInput formControlName="name" required />
@@ -53,12 +53,13 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
         </mat-form-field>
 
 
+        <div style="display:none"><button type="submit"></button></div>
       </form>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>İptal</button>
-      <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="!form.valid">
+      <button mat-raised-button color="primary" type="submit" (click)="onSubmit()" [disabled]="!form.valid">
         {{ isEdit ? 'Güncelle' : 'Ekle' }}
       </button>
     </mat-dialog-actions>
@@ -100,5 +101,10 @@ export class DeviceTypeAddDialogComponent {
     if (this.form.valid) {
       this.dialogRef.close(this.form.value);
     }
+  }
+
+  onFormEnter(event: Event) {
+    try { const target = event.target as HTMLElement; if (target && target.tagName === 'TEXTAREA') return; } catch (e) {}
+    event.preventDefault(); this.onSubmit();
   }
 }

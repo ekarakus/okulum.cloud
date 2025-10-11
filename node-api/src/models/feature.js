@@ -8,6 +8,7 @@ const Feature = sequelize.define('Feature', {
   // Sort order (1,2,3...) - smaller number appears first
   sort_order: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
 }, {
+  tableName: 'features',
   timestamps: false // Sequelize timestamp'lerini kapat
 });
 

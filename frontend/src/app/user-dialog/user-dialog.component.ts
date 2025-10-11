@@ -39,7 +39,7 @@ export interface UserDialogData {
       {{ data.mode === 'add' ? 'Yeni Kullanıcı Ekle' : 'Kullanıcıyı Düzenle' }}
     </h2>
     <mat-dialog-content>
-      <form [formGroup]="userForm" class="user-form">
+  <form [formGroup]="userForm" class="user-form" (ngSubmit)="onSave()" (keydown.enter)="onFormEnter($event)">
         <!-- Temel Bilgiler -->
         <mat-form-field appearance="outline">
           <mat-label>Ad Soyad</mat-label>
@@ -86,11 +86,12 @@ export interface UserDialogData {
             </mat-select>
           </mat-form-field>
         </div>
+        <div style="display:none"><button type="submit"></button></div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()">İptal</button>
-      <button mat-raised-button color="primary" (click)="onSave()" [disabled]="!userForm.valid || isLoading">
+  <button mat-raised-button color="primary" type="submit" (click)="onSave()" [disabled]="!userForm.valid || isLoading">
         <span *ngIf="!isLoading">Kaydet</span>
         <span *ngIf="isLoading">Kaydediliyor...</span>
       </button>
@@ -224,5 +225,14 @@ export class UserDialogComponent implements OnInit {
 
   private showError(message: string): void {
     this.snackBar.open(message, 'Kapat', { duration: 5000 });
+  }
+
+  onFormEnter(event: Event) {
+    try {
+      const target = event.target as HTMLElement;
+      if (target && target.tagName === 'TEXTAREA') return; // allow new lines in textareas
+    } catch (e) {}
+    event.preventDefault();
+    this.onSave();
   }
 }

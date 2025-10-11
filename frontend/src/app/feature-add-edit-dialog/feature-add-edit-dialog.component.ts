@@ -12,7 +12,7 @@ import { CommonModule } from '@angular/common';
   template: `
     <h2 mat-dialog-title>{{ data.feature ? 'Özellik Düzenle' : 'Yeni Özellik Ekle' }}</h2>
     <mat-dialog-content>
-      <form [formGroup]="form">
+      <form [formGroup]="form" (ngSubmit)="onSave()" (keydown.enter)="onFormEnter($event)">
         <mat-form-field style="width:100%; margin-bottom: 1rem;">
           <mat-label>Özellik Adı</mat-label>
           <input matInput formControlName="name" placeholder="Özellik adını giriniz">
@@ -27,11 +27,12 @@ import { CommonModule } from '@angular/common';
               <mat-label>Sort Order (smaller appears first)</mat-label>
               <input matInput type="number" formControlName="sort_order" placeholder="1,2,3..." />
             </mat-form-field>
+        <div style="display:none"><button type="submit"></button></div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()">İptal</button>
-      <button mat-button color="primary" (click)="onSave()" [disabled]="!form.valid">
+      <button mat-button color="primary" type="submit" (click)="onSave()" [disabled]="!form.valid">
         {{ data.feature ? 'Güncelle' : 'Ekle' }}
       </button>
     </mat-dialog-actions>
@@ -60,5 +61,14 @@ export class FeatureAddEditDialogComponent {
     if (this.form.valid) {
       this.dialogRef.close(this.form.value);
     }
+  }
+
+  onFormEnter(event: Event) {
+    try {
+      const target = event.target as HTMLElement;
+      if (target && target.tagName === 'TEXTAREA') return; // allow new lines
+    } catch (e) {}
+    event.preventDefault();
+    this.onSave();
   }
 }

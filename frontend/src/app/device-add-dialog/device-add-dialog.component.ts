@@ -30,7 +30,7 @@ import { FilterFeaturePipe } from '../pipes/filter-feature.pipe';
   template: `
   <h2 mat-dialog-title>{{ isEdit ? 'Demirbaş Düzenle' : 'Yeni Demirbaş Ekle' }}</h2>
     <mat-dialog-content>
-      <form [formGroup]="form">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" (keydown.enter)="onFormEnter($event)">
         <!-- Kimlik No sadece düzenleme modunda görünür -->
         <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;" *ngIf="isEdit">
           <mat-label>Kimlik No</mat-label>
@@ -128,12 +128,13 @@ import { FilterFeaturePipe } from '../pipes/filter-feature.pipe';
             </li>
           </ul>
         </div>
+        <div style="display:none"><button type="submit"></button></div>
       </form>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>İptal</button>
-      <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="!form.valid">
+      <button mat-raised-button color="primary" type="submit" (click)="onSubmit()" [disabled]="!form.valid">
         {{ isEdit ? 'Güncelle' : 'Ekle' }}
       </button>
     </mat-dialog-actions>
@@ -205,6 +206,11 @@ export class DeviceAddDialogComponent implements OnInit {
     setTimeout(() => {
       this.loadFeatures();
     }, 0);
+  }
+
+  onFormEnter(event: Event) {
+    try { const target = event.target as HTMLElement; if (target && target.tagName === 'TEXTAREA') return; } catch (e) {}
+    event.preventDefault(); this.onSubmit();
   }
 
   onSelectOpened(kind: 'deviceType' | 'location' | 'feature') {

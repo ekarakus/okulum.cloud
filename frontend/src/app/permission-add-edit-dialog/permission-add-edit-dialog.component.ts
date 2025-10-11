@@ -12,7 +12,7 @@ import { CommonModule } from '@angular/common';
   template: `
     <h2 mat-dialog-title>{{data.permission ? 'Yetki Düzenle' : 'Yeni Yetki Ekle'}}</h2>
     <mat-dialog-content>
-      <form [formGroup]="form" (ngSubmit)="onSave()" (keydown.enter)="$event.stopPropagation(); onSave();">
+  <form [formGroup]="form" (ngSubmit)="onSave()" (keydown.enter)="onFormEnter($event)">
         <mat-form-field style="width: 100%; margin-bottom: 1rem;">
           <mat-label>Yetki Adı</mat-label>
           <input matInput formControlName="name" placeholder="Yetki adını girin" autocomplete="off">
@@ -57,5 +57,10 @@ export class PermissionAddEditDialogComponent {
     if (this.form.valid) {
       this.dialogRef.close(this.form.value);
     }
+  }
+
+  onFormEnter(event: Event) {
+    try { const target = event.target as HTMLElement; if (target && target.tagName === 'TEXTAREA') return; } catch (e) {}
+    event.preventDefault(); this.onSave();
   }
 }

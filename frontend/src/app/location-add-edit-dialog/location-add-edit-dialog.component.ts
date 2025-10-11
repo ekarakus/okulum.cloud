@@ -12,7 +12,7 @@ import { CommonModule } from '@angular/common';
   template: `
     <h2 mat-dialog-title>{{ data.location ? 'Lokasyon Düzenle' : 'Yeni Lokasyon Ekle' }}</h2>
     <mat-dialog-content>
-      <form [formGroup]="form">
+      <form [formGroup]="form" (ngSubmit)="onSave()" (keydown.enter)="onFormEnter($event)">
         <mat-form-field style="width:100%">
           <mat-label>Ad</mat-label>
           <input matInput formControlName="name" required />
@@ -25,11 +25,12 @@ import { CommonModule } from '@angular/common';
           <mat-label>Açıklama</mat-label>
           <input matInput formControlName="description" />
         </mat-form-field>
+        <div style="display:none"><button type="submit"></button></div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>İptal</button>
-      <button mat-raised-button color="primary" (click)="onSave()" [disabled]="!form.valid">
+      <button mat-raised-button color="primary" type="submit" (click)="onSave()" [disabled]="!form.valid">
         {{ data.location ? 'Güncelle' : 'Ekle' }}
       </button>
     </mat-dialog-actions>
@@ -54,5 +55,10 @@ export class LocationAddEditDialogComponent {
     if (this.form.valid) {
       this.dialogRef.close(this.form.value);
     }
+  }
+
+  onFormEnter(event: Event) {
+    try { const target = event.target as HTMLElement; if (target && target.tagName === 'TEXTAREA') return; } catch (e) {}
+    event.preventDefault(); this.onSave();
   }
 }

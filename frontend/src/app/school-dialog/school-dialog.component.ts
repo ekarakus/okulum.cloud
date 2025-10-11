@@ -41,7 +41,7 @@ export interface SchoolDialogData {
       </div>
 
       <div mat-dialog-content class="dialog-content">
-        <form [formGroup]="schoolForm" class="school-form">
+  <form [formGroup]="schoolForm" class="school-form" (ngSubmit)="onSave()" (keydown.enter)="onFormEnter($event)">
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Okul Adı</mat-label>
             <mat-icon matPrefix fontSet="material-symbols-outlined">school</mat-icon>
@@ -76,6 +76,7 @@ export interface SchoolDialogData {
               Okul kodu sadece harf ve rakam içerebilir
             </mat-error>
           </mat-form-field>
+          <div style="display:none"><button type="submit"></button></div>
         </form>
       </div>
 
@@ -87,11 +88,12 @@ export interface SchoolDialogData {
           <mat-icon fontSet="material-symbols-outlined">cancel</mat-icon>
           İptal
         </button>
-        <button mat-raised-button
-                color="primary"
-                (click)="onSave()"
-                [disabled]="schoolForm.invalid || isLoading"
-                class="save-button">
+  <button mat-raised-button
+    color="primary"
+    type="submit"
+    (click)="onSave()"
+    [disabled]="schoolForm.invalid || isLoading"
+    class="save-button">
           <mat-icon fontSet="material-symbols-outlined">{{ isLoading ? 'pending' : 'save' }}</mat-icon>
           {{ isLoading ? 'Kaydediliyor...' : (data.mode === 'add' ? 'Ekle' : 'Güncelle') }}
         </button>
@@ -239,5 +241,10 @@ export class SchoolDialogComponent implements OnInit {
       // Form'daki tüm alanları touch yap ki hatalar görünsün
       this.schoolForm.markAllAsTouched();
     }
+  }
+
+  onFormEnter(event: Event) {
+    try { const target = event.target as HTMLElement; if (target && target.tagName === 'TEXTAREA') return; } catch (e) {}
+    event.preventDefault(); this.onSave();
   }
 }

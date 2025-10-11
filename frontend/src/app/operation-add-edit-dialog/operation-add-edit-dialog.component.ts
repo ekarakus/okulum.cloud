@@ -20,7 +20,7 @@ import { apiBase } from '../runtime-config';
   template: `
     <h2 mat-dialog-title>{{ data.operation ? 'İşlem Düzenle' : 'Yeni İşlem Ekle' }}</h2>
     <mat-dialog-content>
-      <form [formGroup]="form">
+      <form [formGroup]="form" (ngSubmit)="onSave()" (keydown.enter)="onFormEnter($event)">
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Demirbaş</mat-label>
           <mat-select formControlName="device_id" required>
@@ -61,11 +61,12 @@ import { apiBase } from '../runtime-config';
             Tamamlandı mı?
           </mat-checkbox>
         </div>
+        <div style="display:none"><button type="submit"></button></div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>İptal</button>
-      <button mat-raised-button color="primary" (click)="onSave()" [disabled]="!form.valid">
+      <button mat-raised-button color="primary" type="submit" [disabled]="!form.valid" (click)="onSave()">
         {{ data.operation ? 'Güncelle' : 'Ekle' }}
       </button>
     </mat-dialog-actions>
@@ -177,5 +178,17 @@ export class OperationAddEditDialogComponent {
       formValue.date = formValue.date.toISOString();
       this.dialogRef.close(formValue);
     }
+  }
+
+  onFormEnter(event: Event) {
+    try {
+      const target = event.target as HTMLElement;
+      if (target && target.tagName === 'TEXTAREA') {
+        // allow newline in textareas
+        return;
+      }
+    } catch (e) { /* ignore */ }
+    event.preventDefault();
+    this.onSave();
   }
 }
