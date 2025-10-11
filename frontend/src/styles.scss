@@ -1,0 +1,97 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* Global Layout Optimization */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* Mobile Optimizations */
+* {
+  box-sizing: border-box;
+}
+
+/* Touch-friendly targets */
+button, a, [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Mobile viewport optimization */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  mat-card {
+    margin: 8px !important;
+    padding: 12px !important;
+  }
+
+  .mat-mdc-form-field {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+
+  mat-card {
+    margin: 4px !important;
+    padding: 8px !important;
+  }
+}
+
+/* Scrollbar customization for webkit browsers */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Compact table rows for list views: vertical padding 4px, horizontal 12px */
+table, .mat-table {
+  border-collapse: collapse;
+}
+
+/* Apply to both native tables and Angular Material table cells */
+table th, table td, .mat-header-cell, .mat-cell {
+  padding: 4px 12px !important;
+  vertical-align: middle;
+}
+
+/* Slightly smaller font-size for dense tables */
+table, .mat-table {
+  font-size: 13px;
+}
+
+/* Reduce header height visually */
+.mat-header-row, thead tr {
+  height: 32px; /* visual hint; rows will follow padding */
+}
+
+/* Ensure filter cards keep their comfortable padding */
+.filter-card, .table-header {
+  padding: 12px !important;
+}

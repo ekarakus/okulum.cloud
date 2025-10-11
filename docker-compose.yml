@@ -1,0 +1,37 @@
+services:
+  python-app:
+    build: ./python-app
+    container_name: python-app
+    ports:
+      - "5000:5000"
+    restart: always
+
+  node-api:
+    build: ./node-api
+    container_name: node-api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mysql
+      - python-app
+    restart: always
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_DATABASE: myapp
+    ports:
+      - "3306:3306"
+    restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - node-api
+    restart: always
+
