@@ -10,6 +10,7 @@ const Feature = require('./feature');
 const DeviceFeature = require('./deviceFeature');
 const School = require('./school');
 const UserSchool = require('./userSchool');
+const Permission = require('./permission');
 
 // İlişkiler
 Location.hasMany(Device, { foreignKey: 'location_id', as: 'Location' });
@@ -96,4 +97,5 @@ module.exports = {
   DeviceFeature,
   School,
   UserSchool,
+  Permission,
 };

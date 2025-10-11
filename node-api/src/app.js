@@ -69,6 +69,10 @@ app.use('/api/features', featureRouter);
 const globalSettingRouter = require('./routes/globalSetting');
 app.use('/api/global-settings', globalSettingRouter);
 
+// Permissions (Yetkiler) - super_admin only
+const permissionRouter = require('./routes/permissionRoutes');
+app.use('/api/permissions', permissionRouter);
+
 // Report routes
 const reportRouter = require('./routes/report');
 app.use('/api/reports', reportRouter);

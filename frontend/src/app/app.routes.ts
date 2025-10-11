@@ -72,6 +72,11 @@ export const routes: Routes = [
         loadComponent: () => import('./feature-list/feature-list.component').then(m => m.FeatureListComponent),
         data: { role: 'super_admin' }
       },
+      {
+        path: 'permissions',
+        loadComponent: () => import('./permission-list/permission-list.component').then(m => m.PermissionListComponent),
+        data: { role: 'super_admin' }
+      },
 
       // School-specific routes - tüm kimlik doğrulaması yapılmış kullanıcılar
       {

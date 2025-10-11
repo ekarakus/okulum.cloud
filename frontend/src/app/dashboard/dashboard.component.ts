@@ -97,6 +97,15 @@ import { apiBase } from '../runtime-config';
               </div>
             </div>
           </mat-card>
+          <mat-card class="admin-card" (click)="navigateTo('/permissions')">
+            <div class="admin-card-content">
+              <span class="material-symbols-rounded admin-icon" aria-hidden="true">security</span>
+              <div class="admin-text">
+                <div class="admin-title">Yetkiler</div>
+                <div class="admin-subtitle">Yetki yönetimi</div>
+              </div>
+            </div>
+          </mat-card>
         </div>
       </div>
 
