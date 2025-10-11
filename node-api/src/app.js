@@ -1,15 +1,11 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+const config = require('../config');
 const express = require('express');
 const cors = require('cors');
 const app = express();
 
 app.use(cors({
-  origin: [
-    'http://localhost:4200', 
-    'http://localhost:4201', 
-    'http://localhost:4204',
-    'http://localhost:3000'
-  ],
+  origin: config.corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -84,7 +80,7 @@ app.use('/api/stats', statsRouter);
 // Ana sayfa için bir rota ekleyelim
 
 app.get('/', (req, res) => {
-  res.status(200).send('API is healthy and running!');
+  res.status(200).send('API çalışıyor...!');
 });
 
 // No public test routes in production

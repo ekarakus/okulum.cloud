@@ -11,7 +11,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 
 @Component({
   selector: 'app-operation-add-edit-dialog',
@@ -22,7 +22,7 @@ import { environment } from '../../environments/environment';
     <mat-dialog-content>
       <form [formGroup]="form">
         <mat-form-field appearance="outline" style="width:100%">
-          <mat-label>Cihaz</mat-label>
+          <mat-label>Demirbaş</mat-label>
           <mat-select formControlName="device_id" required>
             <mat-option *ngFor="let device of devices" [value]="device.id">
               {{device.name}} ({{device.identity_no}})
@@ -133,7 +133,7 @@ export class OperationAddEditDialogComponent {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      let url = `${environment.apiUrl}/api/devices`;
+  let url = `${apiBase}/api/devices`;
       if (this.data.selectedSchoolId) {
         url += `?school_id=${this.data.selectedSchoolId}`;
       }
@@ -148,7 +148,7 @@ export class OperationAddEditDialogComponent {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.get<any[]>(`${environment.apiUrl}/api/operation-types`, { headers }).subscribe({
+  this.http.get<any[]>(`${apiBase}/api/operation-types`, { headers }).subscribe({
         next: data => this.operationTypes = data,
         error: err => console.error('Error loading operation types:', err)
       });
@@ -159,7 +159,7 @@ export class OperationAddEditDialogComponent {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      let url = `${environment.apiUrl}/api/technicians`;
+  let url = `${apiBase}/api/technicians`;
       if (this.data.selectedSchoolId) {
         url += `?school_id=${this.data.selectedSchoolId}`;
       }

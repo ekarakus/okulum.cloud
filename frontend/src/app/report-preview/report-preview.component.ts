@@ -7,11 +7,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { MatDialog } from '@angular/material/dialog';
-import { QrSizeDialogComponent } from '../qr-size-dialog/qr-size-dialog.component';
+// no settings dialog for QR printing — we use fixed 35mm squares
 import QRCode from 'qrcode';
 import { AuthService } from '../services/auth.service';
-import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 
 @Component({
   selector: 'app-report-preview',
@@ -31,7 +30,7 @@ import { environment } from '../../environments/environment';
         </div>
         <div class="center-controls">
           <mat-form-field *ngIf="showTypeFilter" appearance="outline" class="type-filter">
-            <mat-label>Cihaz Türü</mat-label>
+            <mat-label>Demirbaş Türü</mat-label>
             <mat-select [(value)]="selectedDeviceType" (selectionChange)="onDeviceTypeChange($event.value)">
               <mat-option [value]="'all'">Tümü</mat-option>
               <mat-option *ngFor="let t of deviceTypes" [value]="t.id">{{ t.name }} - {{ t.count || 0 }}</mat-option>
@@ -101,8 +100,7 @@ export class ReportPreviewComponent implements OnInit {
     private http: HttpClient,
     private sanitizer: DomSanitizer,
     private cdr: ChangeDetectorRef,
-    private auth: AuthService,
-    private dialog: MatDialog
+    private auth: AuthService
   ) {}
   async ngOnInit(){
     const groupBy = this.route.snapshot.queryParamMap.get('groupBy') || 'location';
@@ -110,12 +108,12 @@ export class ReportPreviewComponent implements OnInit {
     const schoolId = this.route.snapshot.queryParamMap.get('school_id') || (selected ? String(selected.id) : null);
   const filterDeviceType = this.route.snapshot.queryParamMap.get('filter_device_type') || null;
   const filterLocation = this.route.snapshot.queryParamMap.get('filter_location') || null;
-    this.title = groupBy === 'location' ? 'Okuldaki cihazlar - Lokasyona göre' : 'Okuldaki cihazlar - Cihaz türüne göre';
+  this.title = groupBy === 'location' ? 'Okuldaki demirbaşlar - Lokasyona göre' : 'Okuldaki demirbaşlar - Demirbaş türüne göre';
     this.showTypeFilter = groupBy === 'device_type';
   this.showLocationFilter = groupBy === 'location';
     try {
       const headers = this.auth.getToken() ? new HttpHeaders().set('Authorization', `Bearer ${this.auth.getToken()}`) : undefined;
-      let url = `${environment.apiUrl}/api/reports/devices/grouped-by-${groupBy === 'location' ? 'location' : 'device-type'}`;
+  let url = `${apiBase}/api/reports/devices/grouped-by-${groupBy === 'location' ? 'location' : 'device-type'}`;
       const params: string[] = [];
   if (schoolId) params.push(`school_id=${schoolId}`);
   if (filterDeviceType) params.push(`filter_device_type=${encodeURIComponent(filterDeviceType)}`);
@@ -128,7 +126,7 @@ export class ReportPreviewComponent implements OnInit {
       if (groupBy === 'device_type') {
         try {
           // Load all device types, compute counts from grouped response, sort by count desc
-          const types: any = await this.http.get(`${environment.apiUrl}/api/device-types`, { headers }).toPromise();
+          const types: any = await this.http.get(`${apiBase}/api/device-types`, { headers }).toPromise();
           const allTypes = Array.isArray(types) ? types : [];
           const counts: Record<string, number> = {};
           if (resp && resp.grouped) Object.keys(resp.grouped).forEach(k => counts[k] = resp.grouped[k].length);
@@ -144,7 +142,7 @@ export class ReportPreviewComponent implements OnInit {
       // If location grouping, load locations and compute counts from grouped response
       if (groupBy === 'location') {
         try {
-          const types: any = await this.http.get(`${environment.apiUrl}/api/locations?school_id=${schoolId}`, { headers }).toPromise();
+          const types: any = await this.http.get(`${apiBase}/api/locations?school_id=${schoolId}`, { headers }).toPromise();
           const allLocs = Array.isArray(types) ? types : [];
           const counts: Record<string, number> = {};
           if (resp && resp.grouped) Object.keys(resp.grouped).forEach(k => counts[k] = resp.grouped[k].length);
@@ -206,7 +204,7 @@ export class ReportPreviewComponent implements OnInit {
     // reuse core logic from ngOnInit but isolated
     try {
       const headers = this.auth.getToken() ? new HttpHeaders().set('Authorization', `Bearer ${this.auth.getToken()}`) : undefined;
-      let url = `${environment.apiUrl}/api/reports/devices/grouped-by-${groupBy === 'location' ? 'location' : 'device-type'}`;
+  let url = `${apiBase}/api/reports/devices/grouped-by-${groupBy === 'location' ? 'location' : 'device-type'}`;
       const params: string[] = [];
   if (schoolId) params.push(`school_id=${schoolId}`);
   if (filterDeviceType) params.push(`filter_device_type=${encodeURIComponent(filterDeviceType)}`);
@@ -221,7 +219,7 @@ export class ReportPreviewComponent implements OnInit {
         // If deviceTypes not populated yet (edge), populate counts from resp
         if (!this.deviceTypes || this.deviceTypes.length === 0) {
           try {
-            const types: any = await this.http.get(`${environment.apiUrl}/api/device-types`, { headers }).toPromise();
+            const types: any = await this.http.get(`${apiBase}/api/device-types`, { headers }).toPromise();
             const allTypes = Array.isArray(types) ? types : [];
             const counts: Record<string, number> = {};
             if (resp && resp.grouped) Object.keys(resp.grouped).forEach(k => counts[k] = resp.grouped[k].length);
@@ -234,7 +232,7 @@ export class ReportPreviewComponent implements OnInit {
         // If locations not populated yet (edge), populate counts from resp
         if (!this.locations || this.locations.length === 0) {
           try {
-            const types: any = await this.http.get(`${environment.apiUrl}/api/locations?school_id=${schoolId}`, { headers }).toPromise();
+            const types: any = await this.http.get(`${apiBase}/api/locations?school_id=${schoolId}`, { headers }).toPromise();
             const allLocs = Array.isArray(types) ? types : [];
             const counts: Record<string, number> = {};
             if (resp && resp.grouped) Object.keys(resp.grouped).forEach(k=> counts[k] = resp.grouped[k].length);
@@ -301,7 +299,7 @@ export class ReportPreviewComponent implements OnInit {
       const items = grouped[groupName];
       html += `<h2>${groupName} (${items.length})</h2>`;
       html += `<table><thead><tr>`;
-      html += `<th>Cihaz Kimlik No</th><th>Cihaz Adı</th><th>Seri No</th><th>Kullanıcı</th><th>Aygıt Tipi</th><th>Lokasyon</th>`;
+  html += `<th>Demirbaş Kimlik No</th><th>Demirbaş Adı</th><th>Seri No</th><th>Kullanıcı</th><th>Demirbaş Tipi</th><th>Lokasyon</th>`;
       html += `</tr></thead><tbody>`;
       items.forEach((it:any)=>{
         html += `<tr>`;
@@ -322,23 +320,13 @@ export class ReportPreviewComponent implements OnInit {
   // Build a QR code sheet: fetch devices according to current filters and render QR codes
   async printQr(){
     try {
-  // Ask the user for desired QR size in a dialog (default taken from last-used or 3.3)
-  const last = parseFloat(String(localStorage.getItem('qrLastSize') || '3.3'));
-  const dlgRef = this.dialog.open(QrSizeDialogComponent, { width: '320px', data: { default: !isNaN(last) && last > 0 ? last : 3.3 } });
-  const result = await dlgRef.afterClosed().toPromise();
-  let cm = typeof result === 'number' ? result : ( !isNaN(last) && last > 0 ? last : 3.3 );
-  // persist chosen size
-  if (typeof result === 'number' && !isNaN(result) && result > 0) localStorage.setItem('qrLastSize', String(result));
-  // limit to reasonable bounds
-  if (isNaN(cm) || cm <= 0) cm = 3.3;
-      if (cm > 40) cm = 40;
-      const cardMm = cm * 10; // convert to millimeters for CSS
+  // No dialog: Use fixed 35mm x 35mm squares, no gap, arranged left-to-right, wrap to next row.
+  const finalCardMm = 35; // fixed outer edge in millimeters
+  const pageWidthMm = 210;
+  const cols = Math.max(1, Math.floor(pageWidthMm / finalCardMm)); // should be 6 for 35mm
+  const identityFontMm = Math.max(2.5, Math.round(finalCardMm * 0.12 * 10) / 10);
 
-      // compute identity font-size proportional to card size (12% of card height) — controlled by entered cm
-      // keep a practical minimum so very small cards remain legible
-      const identityFontMm = Math.max(3, Math.round(cardMm * 0.12 * 10) / 10);
-
-      const selected = this.auth.getSelectedSchool();
+  const selected = this.auth.getSelectedSchool();
       const schoolId = selected ? String(selected.id) : null;
       const headers = this.auth.getToken() ? new HttpHeaders().set('Authorization', `Bearer ${this.auth.getToken()}`) : undefined;
       // Build query to fetch devices filtered by school, device_type and location if selected
@@ -346,26 +334,29 @@ export class ReportPreviewComponent implements OnInit {
       if (schoolId) params.push(`school_id=${schoolId}`);
       if (this.selectedDeviceType && this.selectedDeviceType !== 'all') params.push(`device_type_id=${encodeURIComponent(this.selectedDeviceType)}`);
       if (this.selectedLocation && this.selectedLocation !== 'all') params.push(`location_id=${encodeURIComponent(this.selectedLocation)}`);
-      let url = `${environment.apiUrl}/api/devices`;
+  let url = `${apiBase}/api/devices`;
       if (params.length) url += `?${params.join('&')}`;
       const devices: any = await this.http.get(url, { headers }).toPromise();
 
-      // build HTML with QR codes; use the same host/route pattern as device-detail
-      const host = (typeof window !== 'undefined' && window.location) ? `${window.location.protocol}//${window.location.hostname}:${4201}` : 'http://localhost:4201';
+      // build HTML with QR codes for A4 portrait
+      const host = (typeof window !== 'undefined' && window.location) ? `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':'+window.location.port : ''}` : '';
+      // CSS: A4 portrait, margin 0 so we can tightly pack 35x35mm tiles across the 210mm width
       let html = `<!doctype html><html><head><meta charset="utf-8"><title>QR Yazdır</title><style>
-        html,body{height:100%;background:#eee;margin:0;padding:0}
-        body{display:flex;align-items:start;justify-content:center;padding:20px;font-family:Arial,Helvetica,sans-serif}
-        .sheet{width:210mm;min-height:297mm;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,0.12);padding:12mm;box-sizing:border-box}
-        .grid{display:flex;flex-wrap:wrap;gap:12px}
-        .card{width:${cardMm}mm;height:${cardMm}mm;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #ddd;padding:8px;box-sizing:border-box}
-        .card img{width:calc(100% - 16px);height:auto;max-height:calc(100% - 28px);object-fit:contain}
-        .identity{margin-top:8px;font-weight:600;font-size:${identityFontMm}mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        @media print{ html,body{background:#fff} .sheet{box-shadow:none;margin:0;padding:6mm;width:auto;min-height:auto} }
-      </style></head><body><div class="sheet"><h1>QR Kodlar — ${cm} cm</h1><div class="grid">`;
+        @page { size: A4 portrait; margin: 0 }
+        html,body{height:100%;background:#fff;margin:0;padding:0}
+        .sheet{width:210mm;min-height:297mm;background:#fff;padding:0;margin:0;box-sizing:border-box}
+        .grid{display:flex;flex-wrap:wrap;gap:0;margin:0;padding:0}
+  .card{width:${finalCardMm}mm;height:${finalCardMm}mm;display:flex;flex-direction:column;align-items:center;justify-content:center;border:0;box-sizing:border-box;padding:0;margin:0}
+  /* QR should be exactly 25mm and centered; identity sits below it and both are centered together */
+  .card .qrwrap{width:25mm;height:25mm;display:flex;align-items:center;justify-content:center;margin:0}
+  .card img{width:100%;height:100%;object-fit:contain;display:block}
+  .identity{display:block;width:100%;text-align:center;margin-top:2px;font-weight:600;font-size:${identityFontMm}mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        @media print{ @page { size: A4 portrait; margin: 0 } .sheet{box-shadow:none;margin:0;padding:0} }
+      </style></head><body><div class="sheet"><div class="grid">`;
 
       // For each device, generate data URLs using bundled QRCode and embed directly
       for (const d of devices){
-        const urlFor = `${host}/device-detail/${d.id}`;
+  const urlFor = `${host}/device-detail/${d.id}`;
         const identity = (d.identity_no || '').toString();
         // scale identity font per length: reduce font mm in small steps for long strings
         let fontMm = identityFontMm;
@@ -376,9 +367,12 @@ export class ReportPreviewComponent implements OnInit {
         }
         const identityStyle = `font-size:${fontMm}mm;`;
         try{
-          const px = Math.max(80, Math.round(cardMm * 3.78) - 16);
-          const dataUrl = await QRCode.toDataURL(urlFor, { width: px, margin: 1 });
-          html += `<div class="card"><img src="${dataUrl}" alt="QR"/><div class="identity" style="${identityStyle}">${identity}</div></div>`;
+          // QR target physical size in mm
+          const qrMm = 25;
+          // convert mm to approx pixels (1 mm ≈ 3.78 px at 96dpi)
+          const px = Math.max(48, Math.round(qrMm * 3.78));
+          const dataUrl = await QRCode.toDataURL(urlFor, { width: px, margin: 0 });
+          html += `<div class="card"><div class="qrwrap"><img src="${dataUrl}" alt="QR"/></div><div class="identity" style="${identityStyle}">${identity}</div></div>`;
         }catch(e){
           html += `<div class="card"><img src="" alt="QR"/><div class="identity" style="${identityStyle}">${identity}</div></div>`;
         }

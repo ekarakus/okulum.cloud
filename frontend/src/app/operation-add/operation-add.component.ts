@@ -11,7 +11,7 @@ import { OfflineQueueService } from '../offline-queue.service';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 
 @Component({
   selector: 'app-operation-add',
@@ -28,7 +28,7 @@ import { environment } from '../../environments/environment';
       </div>
       <form [formGroup]="form" (ngSubmit)="addOperation()">
         <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;">
-          <mat-label>Cihaz</mat-label>
+          <mat-label>Demirbaş</mat-label>
           <mat-select formControlName="device_id" required>
             <mat-option *ngFor="let device of devices" [value]="device.id">
               {{device.name}} ({{device.identity_no}}) - {{device.Location?.name}}
@@ -123,7 +123,7 @@ export class OperationAddComponent implements OnInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.get<any[]>(`${environment.apiUrl}/api/devices`, { headers }).subscribe({
+  this.http.get<any[]>(`${apiBase}/api/devices`, { headers }).subscribe({
         next: data => this.devices = data,
         error: err => console.error('Error loading devices:', err)
       });
@@ -134,7 +134,7 @@ export class OperationAddComponent implements OnInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.get<any[]>(`${environment.apiUrl}/api/operation-types`, { headers }).subscribe({
+  this.http.get<any[]>(`${apiBase}/api/operation-types`, { headers }).subscribe({
         next: data => this.operationTypes = data,
         error: err => console.error('Error loading operation types:', err)
       });
@@ -145,7 +145,7 @@ export class OperationAddComponent implements OnInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.get<any[]>(`${environment.apiUrl}/api/technicians`, { headers }).subscribe({
+  this.http.get<any[]>(`${apiBase}/api/technicians`, { headers }).subscribe({
         next: data => this.technicians = data,
         error: err => console.error('Error loading technicians:', err)
       });
@@ -175,7 +175,7 @@ export class OperationAddComponent implements OnInit {
       const token = this.getToken();
       if (token) {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-        this.http.post(`${environment.apiUrl}/api/operations`, this.form.value, { headers }).subscribe({
+  this.http.post(`${apiBase}/api/operations`, this.form.value, { headers }).subscribe({
           next: (res) => {
             alert('İşlem başarıyla eklendi!');
             this.resetForm();
@@ -202,7 +202,7 @@ export class OperationAddComponent implements OnInit {
 
         let syncedCount = 0;
         queue.forEach(op => {
-          this.http.post(`${environment.apiUrl}/api/operations`, op, { headers }).subscribe({
+          this.http.post(`${apiBase}/api/operations`, op, { headers }).subscribe({
             next: () => {
               syncedCount++;
               if (syncedCount === queue.length) {

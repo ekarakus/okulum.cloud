@@ -11,17 +11,17 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, FormsModule],
   template: `
-    <h2 mat-dialog-title>QR Boyutu (cm)</h2>
+    <h2 mat-dialog-title>Kaç adet yan yana yazdırılsın?</h2>
     <mat-dialog-content>
       <mat-form-field appearance="outline" style="width:100%">
-        <input matInput type="number" min="1" max="40" step="0.1" [(ngModel)]="value" />
+        <input matInput type="number" min="1" max="20" step="1" [(ngModel)]="value" />
       </mat-form-field>
       <div style="margin-top:12px">
         <div style="display:flex;align-items:center;gap:12px">
           <div style="width:80px;height:80px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center">
-            <div [style.fontSize.px]="valuePreviewPx">ID</div>
+            <div [style.fontSize.px]="valuePreviewPx">QR</div>
           </div>
-          <div style="color:#666">Örnek önizleme (yaklaşık)</div>
+          <div style="color:#666">Örnek kare önizleme (yaklaşık)</div>
         </div>
       </div>
     </mat-dialog-content>
@@ -32,13 +32,16 @@ import { FormsModule } from '@angular/forms';
   `
 })
 export class QrSizeDialogComponent {
-  value = 3.3;
+  value = 6; // default columns
   constructor(private dialogRef: MatDialogRef<QrSizeDialogComponent>, @Inject(MAT_DIALOG_DATA) public data: any){
     if (data && data.default) this.value = data.default;
   }
   get valuePreviewPx(){
-    // convert cm to approximate px at 96dpi for preview
-    return Math.max(8, Math.round(this.value * 37.8 * 0.12));
+    // preview size: approximate px for a small square indicator
+    const cols = Math.max(1, Math.min(20, Math.round(this.value || 1)));
+    // show a relative px size for 210mm / cols scaled down
+    const mm = Math.max(5, Math.round((210 / cols) * 0.3));
+    return Math.max(8, Math.round(mm * 3.78));
   }
   ok(){ this.dialogRef.close(this.value); }
   cancel(){ this.dialogRef.close(null); }

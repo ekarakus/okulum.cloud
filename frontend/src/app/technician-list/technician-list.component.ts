@@ -1,5 +1,6 @@
 import { Component, OnInit, AfterViewInit, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { apiBase } from '../runtime-config';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -197,7 +198,7 @@ export class TechnicianListComponent implements OnInit, AfterViewInit {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
     // Okul filtresi ekle - SÜPER ADMİN DAHİL HERKES SEÇİLİ OKULA GÖRE FİLTRELENECEK
-    let url = `${environment.apiUrl}/api/technicians`;
+  let url = `${apiBase}/api/technicians`;
     if (this.selectedSchool) {
       url += `?school_id=${this.selectedSchool.id}`;
     }
@@ -319,7 +320,7 @@ export class TechnicianListComponent implements OnInit, AfterViewInit {
         ...formData,
         school_id: this.selectedSchool?.id
       };
-      this.http.post(`${environment.apiUrl}/api/technicians`, payload, { headers }).subscribe({
+  this.http.post(`${apiBase}/api/technicians`, payload, { headers }).subscribe({
         next: () => {
           this.loadTechnicians();
         },
@@ -332,7 +333,7 @@ export class TechnicianListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.put(`${environment.apiUrl}/api/technicians/${id}`, formData, { headers }).subscribe({
+  this.http.put(`${apiBase}/api/technicians/${id}`, formData, { headers }).subscribe({
         next: () => {
           this.loadTechnicians();
         },
@@ -346,7 +347,7 @@ export class TechnicianListComponent implements OnInit, AfterViewInit {
       const token = this.getToken();
       if (token) {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-        this.http.delete(`${environment.apiUrl}/api/technicians/${id}`, { headers }).subscribe({
+  this.http.delete(`${apiBase}/api/technicians/${id}`, { headers }).subscribe({
           next: () => {
             this.loadTechnicians();
           },

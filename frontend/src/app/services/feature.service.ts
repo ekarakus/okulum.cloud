@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { isPlatformBrowser } from '@angular/common';
+import { apiBase } from '../runtime-config';
 
 export interface Feature {
   id?: number;
@@ -17,7 +18,7 @@ export interface Feature {
   providedIn: 'root'
 })
 export class FeatureService {
-  private apiUrl = `${environment.apiUrl}/api/features`;
+  private apiUrl = `${apiBase}/api/features`;
 
   constructor(
     private http: HttpClient,

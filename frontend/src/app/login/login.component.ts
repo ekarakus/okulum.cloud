@@ -1,4 +1,5 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -25,9 +26,9 @@ import { AuthService } from '../services/auth.service';
     <div class="login-container">
       <div class="login-card">
         <!-- Ana Logo -->
-        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
-          <span class="material-symbols-outlined" style="font-size: 48px; color: #667eea; text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);">school</span>
-          <span class="material-symbols-outlined" style="font-size: 32px; color: #667eea; text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);">computer</span>
+        <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+          <!-- Place your PNG at frontend/public/odys-logo.png so it is copied into the build output root -->
+          <img [src]="logoSrc" (error)="onLogoError($event)" alt="Okul Demirbaş" class="app-logo" />
         </div>
 
         <!-- Technology Icons -->
@@ -39,8 +40,8 @@ import { AuthService } from '../services/auth.service';
           <span class="material-symbols-outlined" style="font-size: 20px; color: #667eea;">hub</span>
         </div>
 
-        <h2 style="margin: 0; color: #2c3e50; font-weight: 600; font-size: 1.8rem;">Okul Bilgisayar Bakım</h2>
-        <h3 style="margin: 0.5rem 0 0 0; color: #2c3e50; font-weight: 400; font-size: 1.2rem;">Yönetim Sistemi</h3>
+
+
         <p style="margin: 1rem 0 0 0; color: #666; font-size: 0.9rem;">
           <span class="material-symbols-outlined" style="font-size: 16px; margin-right: 0.3rem; vertical-align: middle;">admin_panel_settings</span>
           Hesabınızla giriş yapın
@@ -89,7 +90,8 @@ import { AuthService } from '../services/auth.service';
 
           <!-- Enhanced Login Button -->
           <button mat-raised-button color="primary" type="submit" [disabled]="isLoading || loginForm.invalid"
-                  class="login-button">
+          style="margin-top:0px;"
+          class="login-button">
             <div class="button-content">
               <mat-spinner *ngIf="isLoading" diameter="20" style="margin-right: 0.5rem;"></mat-spinner>
               <span>{{ isLoading ? 'Giriş yapılıyor...' : 'Sisteme Giriş Yap' }}</span>
@@ -123,7 +125,7 @@ import { AuthService } from '../services/auth.service';
       background: transparent;
     }
 
-    .login-card {
+  .login-card {
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(20px);
       border-radius: 20px;
@@ -134,16 +136,13 @@ import { AuthService } from '../services/auth.service';
         inset 0 1px 0 rgba(255, 255, 255, 0.9);
       border: 1px solid rgba(255, 255, 255, 0.2);
       text-align: center;
-      max-width: 450px;
+  max-width: 500px;
       width: 100%;
-      transform: perspective(1000px) rotateX(5deg);
-      animation: cardFloat 6s ease-in-out infinite;
+      /* static card: removed float/shake animation for stability */
+      transform: none;
     }
 
-    @keyframes cardFloat {
-      0%, 100% { transform: perspective(1000px) rotateX(5deg) translateY(0px); }
-      50% { transform: perspective(1000px) rotateX(5deg) translateY(-10px); }
-    }
+    /* animation removed intentionally */
 
     .enhanced-field {
       transition: all 0.3s ease;
@@ -195,6 +194,14 @@ import { AuthService } from '../services/auth.service';
         'opsz' 24;
     }
 
+    /* Logo image used on login page - put frontend/public/odys-logo.png */
+    .app-logo {
+      width: 250px;
+      height: auto;
+      display: block;
+      margin: 0 auto 0.5rem;
+    }
+
     /* Global Snackbar Styles */
     ::ng-deep .success-snackbar {
       background-color: #4caf50 !important;
@@ -216,21 +223,33 @@ export class LoginComponent {
   loginForm: FormGroup;
   hidePassword = true;
   isLoading = false;
+  // start with an absolute path; if it 404s we'll fall back to an embedded data URL
+  logoSrc = '/odys-logo.png';
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
     private snackBar: MatSnackBar,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private title: Title
   ) {
     this.loginForm = this.fb.group({
-      email: ['ekarakus@btofis.com', [Validators.required, Validators.email]],
-      password: ['12345', [Validators.required]]
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required]]
     });
   }
 
+  onLogoError(event: Event) {
+    // Fallback to embedded base64 (in case the static file isn't served). Replace with your own if needed.
+    this.logoSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+    // prevent infinite loop in case data URL also fails
+    (event.target as HTMLImageElement).onerror = null;
+  }
+
   ngAfterViewInit() {
+    // Set the browser tab title for the login page
+    try { this.title.setTitle('Okul Demirbaş Sistemi - Giriş'); } catch (e) { /* ignore if Title service unavailable */ }
     // Initialize Google Identity Services button if available
     try {
       const env = (window as any).__env || null;
@@ -243,9 +262,12 @@ export class LoginComponent {
         (window as any).google.accounts.id.initialize({
           client_id: clientId,
           callback: (response: any) => {
-            if (response && response.credential) {
-              this.handleGoogleCredential(response.credential);
-            }
+              console.log('Google Identity response callback:', response);
+              if (response && response.credential) {
+                this.handleGoogleCredential(response.credential);
+              } else {
+                console.warn('Google callback did not contain credential:', response);
+              }
           }
         });
         (window as any).google.accounts.id.renderButton(
@@ -265,6 +287,7 @@ export class LoginComponent {
       this.isLoading = true;
     }, 0);
 
+    console.log('Sending id_token to backend (truncated):', id_token ? id_token.substring(0, 40) + '...' : id_token);
     this.authService.loginWithGoogle(id_token).subscribe({
       next: (response) => {
         // Defer to next tick so change detection stabilizes

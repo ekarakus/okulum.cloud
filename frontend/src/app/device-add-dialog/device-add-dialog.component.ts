@@ -28,7 +28,7 @@ import { FilterFeaturePipe } from '../pipes/filter-feature.pipe';
     , FilterDeviceTypePipe, FilterLocationPipe, FilterFeaturePipe
   ],
   template: `
-    <h2 mat-dialog-title>{{ isEdit ? 'Cihaz Düzenle' : 'Yeni Cihaz Ekle' }}</h2>
+  <h2 mat-dialog-title>{{ isEdit ? 'Demirbaş Düzenle' : 'Yeni Demirbaş Ekle' }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form">
         <!-- Kimlik No sadece düzenleme modunda görünür -->
@@ -48,6 +48,7 @@ import { FilterFeaturePipe } from '../pipes/filter-feature.pipe';
           <input matInput formControlName="serial_no" />
         </mat-form-field>
 
+
         <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;">
           <mat-label>Kullanıcı</mat-label>
           <input matInput formControlName="user" />
@@ -63,10 +64,10 @@ import { FilterFeaturePipe } from '../pipes/filter-feature.pipe';
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;">
-          <mat-label>Aygıt Tipi</mat-label>
+          <mat-label>Demirbaş Tipi</mat-label>
           <mat-select formControlName="device_type_id" (opened)="onSelectOpened('deviceType')">
             <mat-option disabled>
-              <input matInput data-search="deviceType" placeholder="Ara cihaz tipi..." [(ngModel)]="deviceTypeFilter" [ngModelOptions]="{standalone: true}" style="width:100%;" (click)="$event.stopPropagation()" />
+              <input matInput data-search="deviceType" placeholder="Ara demirbaş tipi..." [(ngModel)]="deviceTypeFilter" [ngModelOptions]="{standalone: true}" style="width:100%;" (click)="$event.stopPropagation()" />
             </mat-option>
             <mat-option *ngFor="let dt of deviceTypes | filterDeviceType:deviceTypeFilter" [value]="dt.id">{{dt.name}}</mat-option>
           </mat-select>
@@ -83,6 +84,11 @@ import { FilterFeaturePipe } from '../pipes/filter-feature.pipe';
         </mat-form-field>
 
         <!-- Özellik + Değer Ekleme Alanı -->
+        <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;">
+          <mat-label>Açıklama (Not)</mat-label>
+          <textarea matInput formControlName="remark" rows="3"></textarea>
+        </mat-form-field>
+
         <div style="display: flex; gap: 0.5rem; align-items: flex-start; margin-bottom: 0.5rem;">
           <mat-form-field appearance="outline" style="flex: 1;">
             <mat-label>Özellik</mat-label>
@@ -173,6 +179,7 @@ export class DeviceAddDialogComponent implements OnInit {
         identity_no: [data.device?.identity_no || ''],
         name: [data.device?.name || '', Validators.required],
         serial_no: [data.device?.serial_no || ''],
+        remark: [data.device?.remark || ''],
         user: [data.device?.user || ''],
         status: [data.device?.status || 'active', Validators.required],
         device_type_id: [data.device?.device_type_id || '', Validators.required],
@@ -183,6 +190,7 @@ export class DeviceAddDialogComponent implements OnInit {
       this.form = this.fb.group({
         name: ['', Validators.required],
         serial_no: [''],
+        remark: [''],
         user: [''],
         status: ['active', Validators.required],
         device_type_id: ['', Validators.required],

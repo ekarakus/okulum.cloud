@@ -22,28 +22,28 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
   ],
   schemas: [NO_ERRORS_SCHEMA],
   template: `
-    <h2 mat-dialog-title>{{ isEdit ? 'Aygıt Tipi Düzenle' : 'Yeni Aygıt Tipi Ekle' }}</h2>
+  <h2 mat-dialog-title>{{ isEdit ? 'Demirbaş Tipi Düzenle' : 'Yeni Demirbaş Tipi Ekle' }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form">
         <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;">
-          <mat-label>Aygıt Tipi Adı</mat-label>
+          <mat-label>Demirbaş Tipi Adı</mat-label>
           <input matInput formControlName="name" required />
           <mat-error *ngIf="form.get('name')?.hasError('required')">
-            Aygıt tipi adı gereklidir
+            Demirbaş tipi adı gereklidir
           </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;">
-          <mat-label>Aygıt Kodu (3 karakter)</mat-label>
+          <mat-label>Demirbaş Kodu (3 karakter)</mat-label>
           <input matInput formControlName="device_code" maxlength="3" placeholder="Örn: LAP" required />
           <mat-error *ngIf="form.get('device_code')?.hasError('required')">
-            Aygıt kodu gereklidir
+            Demirbaş kodu gereklidir
           </mat-error>
           <mat-error *ngIf="form.get('device_code')?.hasError('minlength') || form.get('device_code')?.hasError('maxlength')">
-            Aygıt kodu tam olarak 3 karakter olmalıdır
+            Demirbaş kodu tam olarak 3 karakter olmalıdır
           </mat-error>
           <mat-error *ngIf="form.get('device_code')?.hasError('pattern')">
-            Aygıt kodu sadece harf içerebilir
+            Demirbaş kodu sadece harf içerebilir
           </mat-error>
         </mat-form-field>
 

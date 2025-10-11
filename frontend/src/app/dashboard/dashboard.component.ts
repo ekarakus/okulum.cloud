@@ -12,6 +12,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { RouterLink, Router } from '@angular/router';
 import { AuthService, User, School } from '../services/auth.service';
 import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 
 @Component({
   selector: 'app-dashboard',
@@ -24,41 +25,41 @@ import { environment } from '../../environments/environment';
         <h2 class="section-title">🚀 Hızlı Erişim</h2>
         <div class="actions-grid">
           <button mat-raised-button color="primary" routerLink="/devices" class="action-btn primary-btn">
-            <span class="material-symbols-outlined action-icon">computer</span>
-            Cihazlar
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">computer</span>
+            Demirbaşlar
           </button>
           <button mat-raised-button color="accent" routerLink="/operations" class="action-btn accent-btn">
-            <span class="material-symbols-outlined action-icon">assignment</span>
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">assignment</span>
             İşlemler
           </button>
           <button mat-raised-button routerLink="/technicians" class="action-btn info-btn">
-            <span class="material-symbols-outlined action-icon">engineering</span>
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">engineering</span>
             Teknisyenler
           </button>
           <button mat-raised-button routerLink="/locations" class="action-btn success-btn">
-            <span class="material-symbols-outlined action-icon">location_on</span>
+              <span class="material-symbols-outlined action-icon" aria-hidden="true">location_on</span>
             Lokasyonlar
           </button>
           <button mat-raised-button routerLink="/device-types" *ngIf="isSuperAdmin()" class="action-btn warning-btn">
-            <span class="material-symbols-outlined action-icon">category</span>
-            Cihaz Tipleri
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">category</span>
+            Demirbaş Tipleri
           </button>
           <button mat-raised-button routerLink="/operation-types" *ngIf="isSuperAdmin()" class="action-btn secondary-btn">
-            <span class="material-symbols-outlined action-icon">list_alt</span>
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">list_alt</span>
             İşlem Türleri
           </button>
           <button mat-raised-button routerLink="/features" *ngIf="isSuperAdmin()" class="action-btn feature-btn">
-            <span class="material-symbols-outlined action-icon">settings</span>
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">settings</span>
             Özellikler
           </button>
           <!-- Raporlar dropdown -->
           <button mat-stroked-button [matMenuTriggerFor]="reportsMenu" class="action-btn report-btn">
-            <span class="material-symbols-outlined action-icon">print</span>
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">print</span>
             Raporlar
           </button>
           <mat-menu #reportsMenu="matMenu">
             <button mat-menu-item (click)="printGroupedByLocation()">Lokasyona göre grupla ve yazdır</button>
-            <button mat-menu-item (click)="printGroupedByDeviceType()">Cihaz türüne göre grupla ve yazdır</button>
+            <button mat-menu-item (click)="printGroupedByDeviceType()">Demirbaş türüne göre grupla ve yazdır</button>
           </mat-menu>
         </div>
       </div>
@@ -67,11 +68,11 @@ import { environment } from '../../environments/environment';
 
       <!-- Super Admin için Okul Yönetimi -->
       <div *ngIf="isSuperAdmin()" class="admin-section">
-        <h2 class="section-title">Sistem Yönetimi</h2>
+          <h2 class="section-title">Sistem Yönetimi</h2>
         <div class="admin-grid">
           <mat-card class="admin-card" (click)="navigateTo('/schools')">
             <div class="admin-card-content">
-              <span class="material-symbols-rounded admin-icon">school</span>
+              <span class="material-symbols-rounded admin-icon" aria-hidden="true">school</span>
               <div class="admin-text">
                 <div class="admin-title">Okul Yönetimi</div>
                 <div class="admin-subtitle">Okulları yönet</div>
@@ -80,7 +81,7 @@ import { environment } from '../../environments/environment';
           </mat-card>
           <mat-card class="admin-card" (click)="navigateTo('/users')">
             <div class="admin-card-content">
-              <span class="material-symbols-rounded admin-icon">group</span>
+              <span class="material-symbols-rounded admin-icon" aria-hidden="true">group</span>
               <div class="admin-text">
                 <div class="admin-title">Kullanıcı Yönetimi</div>
                 <div class="admin-subtitle">Kullanıcıları yönet</div>
@@ -89,7 +90,7 @@ import { environment } from '../../environments/environment';
           </mat-card>
           <mat-card class="admin-card" (click)="navigateTo('/global-settings')">
             <div class="admin-card-content">
-              <span class="material-symbols-rounded admin-icon">settings</span>
+              <span class="material-symbols-rounded admin-icon" aria-hidden="true">settings</span>
               <div class="admin-text">
                 <div class="admin-title">Global Ayarlar</div>
                 <div class="admin-subtitle">Sistem ayarları</div>
@@ -103,17 +104,17 @@ import { environment } from '../../environments/environment';
       <div class="main-stats-section">
         <h2 class="section-title">Genel Durum</h2>
         <div class="main-stats-grid">
-          <!-- Toplam Cihaz -->
+          <!-- Toplam Demirbaş -->
           <mat-card class="main-stat-card device-card" (click)="navigateTo('/devices')">
             <div class="main-stat-content">
               <div class="main-stat-icon-wrapper">
-                <span class="material-symbols-rounded main-stat-icon">computer</span>
+                <span class="material-symbols-rounded main-stat-icon" aria-hidden="true">computer</span>
                 <div class="icon-bg device-bg"></div>
               </div>
               <div class="main-stat-text">
                 <div class="main-stat-number">{{ totalDevices }}</div>
-                <div class="main-stat-label">Toplam Cihaz</div>
-                <div class="main-stat-subtitle">Kayıtlı cihazlar</div>
+                <div class="main-stat-label">Toplam Demirbaş</div>
+                <div class="main-stat-subtitle">Kayıtlı demirbaşlar</div>
               </div>
               <div class="card-corner-accent device-accent"></div>
             </div>
@@ -123,7 +124,7 @@ import { environment } from '../../environments/environment';
           <mat-card class="main-stat-card operation-card" (click)="navigateTo('/operations')">
             <div class="main-stat-content">
               <div class="main-stat-icon-wrapper">
-                <span class="material-symbols-rounded main-stat-icon">assignment</span>
+                <span class="material-symbols-rounded main-stat-icon" aria-hidden="true">assignment</span>
                 <div class="icon-bg operation-bg"></div>
               </div>
               <div class="main-stat-text">
@@ -139,7 +140,7 @@ import { environment } from '../../environments/environment';
           <mat-card class="main-stat-card pending-card">
             <div class="main-stat-content">
               <div class="main-stat-icon-wrapper">
-                <span class="material-symbols-rounded main-stat-icon">pending</span>
+                <span class="material-symbols-rounded main-stat-icon" aria-hidden="true">pending</span>
                 <div class="icon-bg pending-bg"></div>
               </div>
               <div class="main-stat-text">
@@ -223,11 +224,11 @@ import { environment } from '../../environments/environment';
       <div class="quick-operations-section">
         <h2 class="section-title">⚡ Hızlı İşlemler</h2>
         <div class="quick-operations-grid">
-          <!-- Sol Sütun - Son İşlem Yapılan Cihazlar -->
+          <!-- Sol Sütun - Son İşlem Yapılan Demirbaşlar -->
           <mat-card class="quick-ops-card">
             <mat-card-header>
               <span class="material-symbols-outlined card-icon">computer</span>
-              <mat-card-title>Son 4 İşlem Yapılan Cihaz</mat-card-title>
+              <mat-card-title>Son 4 İşlem Yapılan Demirbaş</mat-card-title>
             </mat-card-header>
             <mat-card-content>
               <div class="ops-list">
@@ -246,7 +247,7 @@ import { environment } from '../../environments/environment';
                 </div>
                 <div *ngIf="recentDevices.length === 0" class="no-data">
                   <span class="material-symbols-outlined">info</span>
-                  <p>Henüz işlem yapılan cihaz bulunmuyor.</p>
+                  <p>Henüz işlem yapılan demirbaş bulunmuyor.</p>
                 </div>
               </div>
             </mat-card-content>
@@ -1134,7 +1135,7 @@ export class DashboardComponent implements OnInit {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
       // Okul ID'sini parametre olarak ekle - SÜPER ADMİN DAHİL HERKES SEÇİLİ OKULA GÖRE FİLTRELENECEK
-      let url = `${environment.apiUrl}/api/stats`;
+  let url = `${apiBase}/api/stats`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }
@@ -1182,7 +1183,7 @@ export class DashboardComponent implements OnInit {
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
-      let url = `${environment.apiUrl}/api/devices/recent`;
+  let url = `${apiBase}/api/devices/recent`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }
@@ -1206,7 +1207,7 @@ export class DashboardComponent implements OnInit {
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
-      let url = `${environment.apiUrl}/api/operations/recent`;
+  let url = `${apiBase}/api/operations/recent`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }

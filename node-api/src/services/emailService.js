@@ -59,9 +59,10 @@ async function attemptSend(transport, mailOptions){
 
 async function sendMail({ to, subject, html, text }) {
   const { transport, cfg } = await getTransport();
-  const fromName = cfg.from_name || 'Sistem';
+  const fromName = cfg.from_name;
   const fromEmail = cfg.from_email || cfg.smtp_user;
-  if (!fromEmail) throw new Error('Gönderen email tanımlı değil');
+  if (!fromName) throw new Error('SMTP from_name (gönderen adı) DB ayarında veya env içinde tanımlı olmalı');
+  if (!fromEmail) throw new Error('Gönderen email tanımlı değil (from_email veya smtp_user)');
   const mailOptions = {
     from: `${fromName} <${fromEmail}>`,
     to,

@@ -12,6 +12,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 
 @Component({
   selector: 'app-device-type-list',
@@ -27,12 +28,12 @@ import { environment } from '../../environments/environment';
           </button>
           <h1>
             <mat-icon fontSet="material-symbols-outlined">category</mat-icon>
-            Aygıt Tipi Yönetimi
+            Demirbaş Tipi Yönetimi
           </h1>
         </div>
         <button mat-raised-button color="primary" (click)="openAddDialog()" class="add-btn">
           <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
-          Yeni Aygıt Tipi Ekle
+          Yeni Demirbaş Tipi Ekle
         </button>
       </div>
 
@@ -41,19 +42,19 @@ import { environment } from '../../environments/environment';
         <div class="table-header">
           <h2>
             <mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon>
-            Aygıt Tipi Listesi
+              Demirbaş Tipi Listesi
           </h2>
         </div>
         <div class="table-container">
           <table mat-table [dataSource]="pagedDeviceTypes" class="devices-table">
         <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('name')" style="cursor:pointer; padding:4px 12px;">Aygıt Tipi Adı
+          <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('name')" style="cursor:pointer; padding:4px 12px;">Demirbaş Tipi Adı
             <mat-icon *ngIf="sort.field==='name'" style="vertical-align: middle; font-size: 16px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
           </th>
           <td mat-cell *matCellDef="let element" style="padding:4px 12px;">{{element.name}}</td>
         </ng-container>
         <ng-container matColumnDef="device_code">
-          <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('device_code')" style="cursor:pointer; padding:4px 12px;">Aygıt Kodu
+          <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('device_code')" style="cursor:pointer; padding:4px 12px;">Demirbaş Kodu
             <mat-icon *ngIf="sort.field==='device_code'" style="vertical-align: middle; font-size: 16px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
           </th>
           <td mat-cell *matCellDef="let element" style="padding:4px 12px;">{{element.device_code}}</td>
@@ -168,7 +169,7 @@ export class DeviceTypeListComponent implements OnInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.get<any[]>(`${environment.apiUrl}/api/device-types`, { headers }).subscribe({
+      this.http.get<any[]>(`${apiBase}/api/device-types`, { headers }).subscribe({
         next: (data: any[]) => {
           this.deviceTypes = data;
           this.pageIndex = 0;
@@ -274,11 +275,11 @@ export class DeviceTypeListComponent implements OnInit {
   }
 
   deleteDeviceType(deviceType: any) {
-    if (confirm(`"${deviceType.name}" aygıt tipini silmek istediğinizden emin misiniz?`)) {
+  if (confirm(`"${deviceType.name}" demirbaş tipini silmek istediğinizden emin misiniz?`)) {
       const token = this.getToken();
       if (token) {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-        this.http.delete(`${environment.apiUrl}/api/device-types/${deviceType.id}`, { headers }).subscribe({
+        this.http.delete(`${apiBase}/api/device-types/${deviceType.id}`, { headers }).subscribe({
           next: () => {
             this.refresh();
           },
@@ -292,7 +293,7 @@ export class DeviceTypeListComponent implements OnInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.post(`${environment.apiUrl}/api/device-types`, deviceTypeData, { headers }).subscribe({
+      this.http.post(`${apiBase}/api/device-types`, deviceTypeData, { headers }).subscribe({
         next: () => {
           this.refresh();
         },
@@ -305,7 +306,7 @@ export class DeviceTypeListComponent implements OnInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.put(`${environment.apiUrl}/api/device-types/${id}`, deviceTypeData, { headers }).subscribe({
+      this.http.put(`${apiBase}/api/device-types/${id}`, deviceTypeData, { headers }).subscribe({
         next: () => {
           this.refresh();
         },

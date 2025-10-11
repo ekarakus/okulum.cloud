@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { apiBase } from '../runtime-config';
 import { environment } from '../../environments/environment';
 import { AuthService, User, School } from '../services/auth.service';
 
@@ -172,7 +173,7 @@ export class UserDialogComponent implements OnInit {
     const token = this.authService.getToken();
     if (!token) return;
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-    this.http.get<School[]>(`${environment.apiUrl}/api/schools`, { headers }).subscribe(
+  this.http.get<School[]>(`${apiBase}/api/schools`, { headers }).subscribe(
       schools => this.allSchools = schools,
       error => this.showError('Okullar yüklenemedi.')
     );
@@ -193,10 +194,10 @@ export class UserDialogComponent implements OnInit {
 
     let request$;
     if (this.data.mode === 'add') {
-      request$ = this.http.post(`${environment.apiUrl}/api/users`, formData, { headers });
+  request$ = this.http.post(`${apiBase}/api/users`, formData, { headers });
     } else {
       const userId = this.data.user?.id;
-      request$ = this.http.put(`${environment.apiUrl}/api/users/${userId}`, formData, { headers });
+  request$ = this.http.put(`${apiBase}/api/users/${userId}`, formData, { headers });
     }
 
     request$.subscribe({

@@ -1,15 +1,16 @@
 const { Sequelize } = require('sequelize');
+const config = require('../../config');
 
-// Local ve Railway ortam değişkenlerini destekleyen yapı
+// Sequelize using central config
 const sequelize = new Sequelize(
-  process.env.MYSQLDATABASE || process.env.DB_NAME, // Local: DB_NAME, Railway: MYSQLDATABASE
-  process.env.MYSQLUSER || process.env.DB_USER,     // Local: DB_USER, Railway: MYSQLUSER
-  process.env.MYSQLPASSWORD || process.env.DB_PASS, // Local: DB_PASS, Railway: MYSQLPASSWORD
+  config.db.database,
+  config.db.user,
+  config.db.password,
   {
-    host: process.env.MYSQLHOST || process.env.DB_HOST, // Local: DB_HOST, Railway: MYSQLHOST
-    port: process.env.MYSQLPORT || process.env.DB_PORT, // Local: DB_PORT, Railway: MYSQLPORT
+    host: config.db.host,
+    port: config.db.port,
     dialect: 'mysql',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    logging: config.nodeEnv === 'development' ? console.log : false,
     pool: {
       max: 5,
       min: 0,
@@ -18,11 +19,7 @@ const sequelize = new Sequelize(
     },
     dialectOptions: {
       connectTimeout: 60000,
-      // Railway için SSL ayarları genellikle gereklidir
-      ssl: process.env.NODE_ENV === 'production' ? {
-        require: true,
-        rejectUnauthorized: false
-      } : false,
+      ssl: config.db.ssl ? { require: true, rejectUnauthorized: config.db.sslRejectUnauthorized } : false,
     },
     retry: {
       match: [
@@ -42,23 +39,18 @@ const sequelize = new Sequelize(
   }
 );
 
-// Bu yardımcı fonksiyonu da doğru değişkenleri kullanacak şekilde güncelledim.
+// createDatabase helper (development use only)
 const createDatabase = async () => {
-  const tempSequelize = new Sequelize('', 
-    process.env.MYSQLUSER || process.env.DB_USER, 
-    process.env.MYSQLPASSWORD || process.env.DB_PASS, {
-    host: process.env.MYSQLHOST || process.env.DB_HOST,
+  const tempSequelize = new Sequelize('', config.db.user, config.db.password, {
+    host: config.db.host,
     dialect: 'mysql',
     logging: false,
   });
   try {
-    await tempSequelize.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.MYSQLDATABASE}\`;`);
-    console.log(`Database ${process.env.MYSQLDATABASE} created or already exists`);
+    await tempSequelize.query(`CREATE DATABASE IF NOT EXISTS \`${config.db.database}\`;`);
+    console.log(`Database ${config.db.database} created or already exists`);
   } catch (error) {
-    // Railway'de bu fonksiyonun çalışması için özel izinler gerekebilir,
-    // genellikle veritabanı zaten oluşturulmuş olduğu için bu adıma gerek kalmaz.
-    // Hata verirse endişelenmeyin.
-    console.error('Error creating database (this might be expected on Railway):', error.message);
+    console.error('Error creating database:', error.message);
   } finally {
     await tempSequelize.close();
   }

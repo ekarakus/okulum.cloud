@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable, of, ReplaySubject } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
 import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 import { Router } from '@angular/router';
 
 export interface School {
@@ -51,7 +52,7 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${environment.apiUrl}/api/auth/login`, { email, password })
+  return this.http.post<LoginResponse>(`${apiBase}/api/auth/login`, { email, password })
       .pipe(
         tap(response => {
           this.setAuthState(response.token, response.user);
@@ -66,7 +67,11 @@ export class AuthService {
 
   // Login using Google id_token obtained from Google Identity Services
   loginWithGoogle(id_token: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${environment.apiUrl}/api/auth/google`, { id_token })
+    // Some clients provide the token under 'credential' instead of 'id_token'.
+    // Send both to maximize compatibility with backend expectations.
+    const payload: any = { id_token };
+    try { payload.credential = id_token; } catch(e) {}
+  return this.http.post<LoginResponse>(`${apiBase}/api/auth/google`, payload)
       .pipe(
         tap(response => {
           this.setAuthState(response.token, response.user);
@@ -127,7 +132,7 @@ export class AuthService {
       return of([]);
     }
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-    return this.http.get<School[]>(`${environment.apiUrl}/api/schools`, { headers });
+  return this.http.get<School[]>(`${apiBase}/api/schools`, { headers });
   }
 
   private setAuthState(token: string, user: User): void {

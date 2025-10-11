@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { apiBase } from '../runtime-config';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -78,7 +79,7 @@ export class RegisterComponent {
     this.form = this.fb.group({ name: '', email: '', password: '' });
   }
   register() {
-    this.http.post(`${environment.apiUrl}/api/auth/register`, this.form.value).subscribe({
+  this.http.post(`${apiBase}/api/auth/register`, this.form.value).subscribe({
       next: () => {
         alert('Kayıt başarılı!');
       },

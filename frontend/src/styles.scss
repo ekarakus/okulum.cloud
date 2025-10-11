@@ -91,6 +91,20 @@ table, .mat-table {
   height: 32px; /* visual hint; rows will follow padding */
 }
 
+/* Ensure Material Symbols fonts are used when classes are present */
+.material-symbols-outlined,
+.material-symbols-rounded {
+  font-family: 'Material Symbols Outlined', 'Material Symbols Rounded', 'Material Icons', sans-serif;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
 /* Ensure filter cards keep their comfortable padding */
 .filter-card, .table-header {
   padding: 12px !important;

@@ -1,5 +1,6 @@
 import { Component, OnInit, AfterViewInit, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { apiBase } from '../runtime-config';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -29,12 +30,12 @@ import { AuthService } from '../services/auth.service';
           </button>
           <h1>
             <mat-icon fontSet="material-symbols-outlined">computer</mat-icon>
-            Cihaz Yönetimi
+              Demirbaş Yönetimi
           </h1>
         </div>
         <button mat-raised-button color="primary" (click)="openAddDialog()" class="add-btn">
           <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
-          Yeni Cihaz Ekle
+            Yeni Demirbaş Ekle
         </button>
       </div>
 
@@ -42,7 +43,7 @@ import { AuthService } from '../services/auth.service';
       <mat-card class="filter-card" style="margin-bottom:1rem;">
   <div class="filters" style="padding: 12px; display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end;">
           <div style="min-width:220px;">
-            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Aygıt Tipi</label>
+            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Demirbaş Tipi</label>
             <select [(ngModel)]="filterDeviceTypeId" (change)="applyFilters()" style="padding:6px; width:100%; border:1px solid #ccc; border-radius:4px;">
               <option [ngValue]="null">Tümü</option>
               <option *ngFor="let dt of deviceTypes" [ngValue]="dt.id">{{dt.name}}</option>
@@ -89,7 +90,7 @@ import { AuthService } from '../services/auth.service';
         <div class="table-header">
           <h2>
             <mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon>
-            Cihaz Listesi
+              Demirbaş Listesi
           </h2>
         </div>
         <div class="table-container">
@@ -103,7 +104,7 @@ import { AuthService } from '../services/auth.service';
         <ng-container matColumnDef="operations">
           <th mat-header-cell *matHeaderCellDef>İşlemler</th>
           <td mat-cell *matCellDef="let element">
-            <button mat-mini-fab color="primary" (click)="viewDeviceOperations(element)" matTooltip="Cihaz İşlemlerini Gör">
+            <button mat-mini-fab color="primary" (click)="viewDeviceOperations(element)" matTooltip="Demirbaş İşlemlerini Gör">
               <span class="material-symbols-outlined">history</span>
             </button>
           </td>
@@ -143,6 +144,8 @@ import { AuthService } from '../services/auth.service';
         </ng-container>
         <ng-container matColumnDef="device_type">
           <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('device_type')" style="cursor:pointer">Aygıt Tipi
+            <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('device_type')" style="cursor:pointer">Demirbaş Tipi
+            <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('device_type')" style="cursor:pointer">Demirbaş Tipi
             <mat-icon *ngIf="sort.field==='device_type'" style="vertical-align: middle; font-size: 16px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
           </th>
           <td mat-cell *matCellDef="let element">{{element.DeviceType?.name}}</td>
@@ -153,6 +156,11 @@ import { AuthService } from '../services/auth.service';
           </th>
           <td mat-cell *matCellDef="let element">{{element.Location?.name}}</td>
         </ng-container>
+        <ng-container matColumnDef="remark">
+          <th mat-header-cell *matHeaderCellDef>Not</th>
+          <td mat-cell *matCellDef="let element">{{element.remark}}</td>
+        </ng-container>
+
         <ng-container matColumnDef="qr">
           <th mat-header-cell *matHeaderCellDef>QR Kod</th>
           <td mat-cell *matCellDef="let element">
@@ -281,7 +289,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
   locations: any[] = [];
   deviceTypes: any[] = [];
   selectedSchool: any = null;
-  displayedColumns: string[] = ['identity_no', 'operations', 'name', 'serial_no', 'user', 'status', 'device_type', 'location', 'qr', 'actions'];
+  displayedColumns: string[] = ['identity_no', 'operations', 'name', 'serial_no', 'user', 'status', 'device_type', 'location', 'remark', 'qr', 'actions'];
   // Pagination
   pagedDevices: any[] = [];
   pageIndex = 0;
@@ -361,7 +369,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
       // Okul filtresi ekle - SÜPER ADMİN DAHİL HERKES SEÇİLİ OKULA GÖRE FİLTRELENECEK
-      let url = `${environment.apiUrl}/api/locations`;
+  let url = `${apiBase}/api/locations`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }
@@ -377,7 +385,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.get<any[]>(`${environment.apiUrl}/api/device-types`, { headers }).subscribe({
+  this.http.get<any[]>(`${apiBase}/api/device-types`, { headers }).subscribe({
         next: data => this.deviceTypes = data,
         error: err => console.error('Error loading device types:', err)
       });
@@ -388,13 +396,13 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      let url = `${environment.apiUrl}/api/devices`;
+  let url = `${apiBase}/api/devices`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }
       this.http.get<any[]>(url, { headers }).subscribe(async data => {
         this.devices = await Promise.all(data.map(async c => {
-          const qrRes: any = await this.http.get(`${environment.apiUrl}/api/devices/${c.id}/qr`, { headers }).toPromise();
+          const qrRes: any = await this.http.get(`${apiBase}/api/devices/${c.id}/qr`, { headers }).toPromise();
           return { ...c, qr_code: qrRes.qr };
         }));
         this.pageIndex = 0;
@@ -529,7 +537,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
         deviceData.school_id = this.selectedSchool.id;
       }
 
-      this.http.post(`${environment.apiUrl}/api/devices`, deviceData, { headers }).subscribe({
+  this.http.post(`${apiBase}/api/devices`, deviceData, { headers }).subscribe({
         next: () => {
           this.refresh();
         },
@@ -555,7 +563,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.put(`${environment.apiUrl}/api/devices/${id}`, deviceData, { headers }).subscribe({
+  this.http.put(`${apiBase}/api/devices/${id}`, deviceData, { headers }).subscribe({
         next: () => {
           this.refresh();
         },
@@ -564,7 +572,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
           if (err.error?.error === 'Bu kimlik numarası zaten kullanılıyor') {
             alert('Bu kimlik numarası zaten kullanılıyor. Lütfen farklı bir kimlik numarası girin.');
           } else {
-            alert('Cihaz güncellenirken bir hata oluştu.');
+            alert('Demirbaş güncellenirken bir hata oluştu.');
           }
         }
       });
@@ -572,11 +580,11 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
   }
 
   deleteDevice(device: any) {
-    if (confirm(`"${device.name}" cihazını silmek istediğinizden emin misiniz?`)) {
+  if (confirm(`"${device.name}" demirbaşını silmek istediğinizden emin misiniz?`)) {
       const token = this.getToken();
       if (token) {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-        this.http.delete(`${environment.apiUrl}/api/devices/${device.id}`, { headers }).subscribe({
+  this.http.delete(`${apiBase}/api/devices/${device.id}`, { headers }).subscribe({
           next: () => {
             this.refresh();
           },
@@ -587,7 +595,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
   }
 
   duplicateDevice(device: any) {
-    if (!confirm(`"${device.name}" cihazını çoğaltmak istediğinize emin misiniz? Yeni cihaz kimlik numarası otomatik oluşturulacaktır.`)) return;
+  if (!confirm(`"${device.name}" demirbaşını çoğaltmak istediğinize emin misiniz? Yeni demirbaş kimlik numarası otomatik oluşturulacaktır.`)) return;
     const token = this.getToken();
     if (!token) return;
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
@@ -622,6 +630,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
       const payload: any = {
         name: clone.name,
         serial_no: clone.serial_no,
+        remark: clone.remark || '',
         user: clone.user,
         status: clone.status,
         device_type_id: clone.device_type_id || clone.DeviceType?.id,
@@ -631,7 +640,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
       };
       if (this.selectedSchool) payload.school_id = this.selectedSchool.id;
 
-      this.http.post(`${environment.apiUrl}/api/devices`, payload, { headers }).subscribe({
+  this.http.post(`${apiBase}/api/devices`, payload, { headers }).subscribe({
         next: () => {
           this.refresh();
         },
@@ -643,7 +652,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
             tryCreate();
           } else {
             console.error('Error duplicating device:', err);
-            alert('Cihaz çoğaltma sırasında hata oluştu: ' + (msg || err.message || err.statusText || ''));
+            alert('Demirbaş çoğaltma sırasında hata oluştu: ' + (msg || err.message || err.statusText || ''));
           }
         }
       });
@@ -660,7 +669,8 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     const schoolName = (this.selectedSchool?.name || 'Okul Seçilmedi').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const activeFilters: string[] = [];
     if (this.filterDeviceTypeId) {
-      const dt = this.deviceTypes.find(t => t.id === this.filterDeviceTypeId); if (dt) activeFilters.push(`Aygıt Tipi: ${dt.name}`);
+      const dt = this.deviceTypes.find(t => t.id === this.filterDeviceTypeId);
+      if (dt) activeFilters.push(`Demirbaş Tipi: ${dt.name}`);
     }
     if (this.filterLocationId) {
       const loc = this.locations.find(l => l.id === this.filterLocationId); if (loc) activeFilters.push(`Lokasyon: ${loc.name}`);
@@ -673,19 +683,28 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
     const rowsHtml = this.filteredDevices.map(d => {
       const features = (d.Features||[]).map((f:any)=>`${f.name}${f.DeviceFeature?.value?': '+f.DeviceFeature.value:''}`).join(', ');
       const safeFeatures = features.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeRemark = (d.remark||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeName = (d.name||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeIdentity = (d.identity_no||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeSerial = (d.serial_no||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeUser = (d.user||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeStatus = (d.status||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeDeviceType = (d.DeviceType?.name||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeLocation = (d.Location?.name||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
       return `<tr>
-        <td>${(d.identity_no||'')}</td>
-        <td>${(d.name||'')}</td>
-        <td>${(d.serial_no||'')}</td>
-        <td>${(d.user||'')}</td>
-        <td>${(d.status||'')}</td>
-        <td>${d.DeviceType?.name||''}</td>
-        <td>${d.Location?.name||''}</td>
+        <td>${safeIdentity}</td>
+        <td>${safeName}</td>
+        <td>${safeSerial}</td>
+        <td>${safeUser}</td>
+        <td>${safeStatus}</td>
+        <td>${safeRemark}</td>
+        <td>${safeDeviceType}</td>
+        <td>${safeLocation}</td>
         <td>${safeFeatures}</td>
       </tr>`; }).join('');
-    const desiredUrl = (window.location?.origin || '') + '/rapor/cihazlar';
-    const html = `<!DOCTYPE html><html lang=\"tr\"><head><meta charset=\"UTF-8\" />
-    <title>Cihaz Raporu - ${schoolName}</title>
+  const desiredUrl = (window.location?.origin || '') + '/rapor/cihazlar';
+  const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8" />
+  <title>Demirbaş Raporu - ${schoolName}</title>
     <style>
       body { font-family: Arial, sans-serif; padding:16px; }
       h1.report-title { font-size:24px; margin:0 0 10px; font-weight:600; }
@@ -698,10 +717,10 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
       .footer-url { margin-top:20px; font-size:10px; color:#888; }
       @media print { body { padding:0; } }
     </style></head><body>
-    <h1 class="report-title">${schoolName} - Cihaz Raporu</h1>
+  <h1 class="report-title">${schoolName} - Demirbaş Raporu</h1>
     <div class="meta">Toplam Kayıt: ${this.filteredDevices.length} | Oluşturulma: ${generatedAt}</div>
     ${filtersHtml}
-    <table><thead><tr><th>Kimlik No</th><th>Ad</th><th>Seri No</th><th>Kullanıcı</th><th>Durum</th><th>Aygıt Tipi</th><th>Lokasyon</th><th>Özellikler</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+  <table><thead><tr><th>Kimlik No</th><th>Ad</th><th>Seri No</th><th>Kullanıcı</th><th>Durum</th><th>Not</th><th>Demirbaş Tipi</th><th>Lokasyon</th><th>Özellikler</th></tr></thead><tbody>${rowsHtml}</tbody></table>
     <div class=\"footer-url\">Kaynak: ${desiredUrl}</div>
     <script>window.print(); setTimeout(()=>window.close(), 300);</script>
     </body></html>`;

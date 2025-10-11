@@ -18,7 +18,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { Subscription, combineLatest, of } from 'rxjs';
 import { switchMap, take, tap } from 'rxjs/operators';
 import { AuthService, User, School } from '../services/auth.service';
-import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 import { UserDialogComponent, UserDialogData } from '../user-dialog/user-dialog.component';
 
 @Component({
@@ -407,11 +407,11 @@ export class UserListComponent implements OnInit, OnDestroy {
 
     // Eğer bir okul seçiliyse (URL'den veya arayüzden), o okula göre filtrele
     if (selectedSchool) {
-      request$ = this.http.get<User[]>(`${environment.apiUrl}/api/users/school/${selectedSchool.id}`, { headers });
+  request$ = this.http.get<User[]>(`${apiBase}/api/users/school/${selectedSchool.id}`, { headers });
     }
     // Okul seçili değilse ve kullanıcı süper admin ise, tüm kullanıcıları getir
     else if (this.authService.isSuperAdmin()) {
-      request$ = this.http.get<User[]>(`${environment.apiUrl}/api/users`, { headers });
+  request$ = this.http.get<User[]>(`${apiBase}/api/users`, { headers });
     }
     // Okul seçili değilse ve normal admin ise, listeyi boşalt (veya birincil okulunu getir)
     else {
@@ -518,7 +518,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     const newStatus = !user.is_active;
 
-    this.http.put(`${environment.apiUrl}/api/users/${user.id}/toggle-status`, {}, { headers })
+  this.http.put(`${apiBase}/api/users/${user.id}/toggle-status`, {}, { headers })
       .subscribe({
         next: () => {
           user.is_active = newStatus;
@@ -557,7 +557,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     if (newPassword && newPassword.length >= 6) {
       const token = this.authService.getToken();
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.put(`${environment.apiUrl}/api/users/${user.id}/password`, { password: newPassword }, { headers })
+  this.http.put(`${apiBase}/api/users/${user.id}/password`, { password: newPassword }, { headers })
         .subscribe({
           next: () => this.showSuccess('Şifre başarıyla güncellendi.'),
           error: () => this.showError('Şifre güncellenirken bir hata oluştu.')
@@ -571,7 +571,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     if (confirm(`"${user.name}" adlı kullanıcıyı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
       const token = this.authService.getToken();
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.delete(`${environment.apiUrl}/api/users/${user.id}`, { headers })
+  this.http.delete(`${apiBase}/api/users/${user.id}`, { headers })
         .subscribe({
           next: () => {
             this.showSuccess('Kullanıcı başarıyla silindi.');

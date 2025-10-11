@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -137,7 +137,7 @@ export class GlobalSettingsComponent implements OnInit {
 
   load() {
     const headers = this.getHeaders();
-    this.http.get<any>(`${environment.apiUrl}/api/global-settings`, { headers }).subscribe({
+  this.http.get<any>(`${apiBase}/api/global-settings`, { headers }).subscribe({
       next: data => {
         if (data) this.model = { ...this.model, ...data };
       },
@@ -148,7 +148,7 @@ export class GlobalSettingsComponent implements OnInit {
   save() {
     this.saving = true;
     const headers = this.getHeaders();
-    this.http.put(`${environment.apiUrl}/api/global-settings`, this.model, { headers }).subscribe({
+  this.http.put(`${apiBase}/api/global-settings`, this.model, { headers }).subscribe({
       next: _ => {
         this.saving = false;
         alert('Ayarlar kaydedildi');
@@ -165,7 +165,7 @@ export class GlobalSettingsComponent implements OnInit {
     if (!this.testEmail) return;
     this.sendingTest = true;
     const headers = this.getHeaders();
-    this.http.post(`${environment.apiUrl}/api/global-settings/test-email`, { to: this.testEmail }, { headers }).subscribe({
+  this.http.post(`${apiBase}/api/global-settings/test-email`, { to: this.testEmail }, { headers }).subscribe({
       next: _ => { this.sendingTest = false; alert('Test email gönderildi'); },
       error: err => { this.sendingTest = false; alert('Test email gönderilemedi'); console.error(err); }
     });

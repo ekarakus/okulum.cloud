@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService, User, School } from '../services/auth.service';
+import { apiBase } from '../runtime-config';
 import { ChangePasswordComponent } from '../change-password/change-password.component';
 import { environment } from '../../environments/environment';
 import { filter } from 'rxjs/operators';
@@ -24,9 +25,7 @@ import { filter } from 'rxjs/operators';
     <div class="dashboard-layout">
       <mat-toolbar color="primary" class="toolbar-content">
         <div class="brand">
-          <svg class="icon icon-school" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-            <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM11 13.06L3.68 9 11 5.94 18.32 9 11 13.06zM11 15.14v5.36h2v-5.36l-1 .55-1-.55z" fill="currentColor"/>
-          </svg>
+          <span class="material-symbols-outlined icon icon-school" aria-hidden="true">school</span>
           <span>Okul Bilgisayar Bakım Sistemi</span>
         </div>
         <div class="toolbar-right" *ngIf="isLoggedIn()">
@@ -203,7 +202,7 @@ export class DashboardLayoutComponent implements OnInit {
     const token = this.authService.getToken();
     if (!token) return;
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-    this.http.get<School[]>(`${environment.apiUrl}/api/schools`, { headers }).subscribe(schools => {
+  this.http.get<School[]>(`${apiBase}/api/schools`, { headers }).subscribe(schools => {
       this.allSchools = schools;
       this.autoSelectFirstSchoolIfNeeded();
       this.cdr.markForCheck();

@@ -1,6 +1,7 @@
 import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { apiBase } from '../runtime-config';
 import { CommonModule, DatePipe, isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,7 +27,7 @@ import { environment } from '../../environments/environment';
           <div class="header-info" [class.no-margin]="!isLoggedIn">
             <span class="material-symbols-outlined device-icon">computer</span>
             <div class="device-title">
-              <h1>{{ device?.name || 'Cihaz Detayı' }}</h1>
+              <h1>{{ device?.name || 'Demirbaş Detayı' }}</h1>
               <p class="device-subtitle">{{ device?.identity_no }}</p>
             </div>
           </div>
@@ -49,7 +50,7 @@ import { environment } from '../../environments/environment';
                 <span class="value">{{ device?.identity_no || '-' }}</span>
               </div>
               <div class="info-row">
-                <span class="label">Cihaz Adı:</span>
+                <span class="label">Demirbaş Adı:</span>
                 <span class="value">{{ device?.name || '-' }}</span>
               </div>
               <div class="info-row">
@@ -77,11 +78,11 @@ import { environment } from '../../environments/environment';
                 <h3>Tür & Lokasyon</h3>
               </div>
               <div class="info-row">
-                <span class="label">Cihaz Tipi:</span>
+                <span class="label">Demirbaş Tipi:</span>
                 <span class="value">{{ device?.DeviceType?.name || '-' }}</span>
               </div>
               <div class="info-row">
-                <span class="label">Cihaz Kodu:</span>
+                <span class="label">Demirbaş Kodu:</span>
                 <span class="value">{{ device?.DeviceType?.device_code || '-' }}</span>
               </div>
               <div class="info-row">
@@ -115,7 +116,7 @@ import { environment } from '../../environments/environment';
                 <span class="material-symbols-outlined card-icon">qr_code</span>
                 <h3>QR Kod</h3>
               </div>
-              <p class="qr-description">QR kodu taratarak cihaz detay sayfasına erişebilirsiniz.</p>
+              <p class="qr-description">QR kodu taratarak demirbaş detay sayfasına erişebilirsiniz.</p>
               <div class="qr-container">
                 <div class="qr-wrapper">
                   <img [src]="device.qr_code" alt="QR Kod" class="qr-image" />
@@ -140,7 +141,7 @@ import { environment } from '../../environments/environment';
             <mat-card-content>
               <div *ngIf="operations.length === 0" class="no-operations">
                 <span class="material-symbols-outlined">assignment</span>
-                <p>Bu cihaz için henüz işlem kaydı bulunmuyor.</p>
+                <p>Bu demirbaş için henüz işlem kaydı bulunmuyor.</p>
               </div>
 
               <div *ngIf="operations.length > 0" class="operations-timeline">
@@ -775,7 +776,7 @@ export class DeviceDetailComponent implements OnInit {
       options.headers = this.getHeaders();
     }
 
-    this.http.get(`${environment.apiUrl}/api/devices/${this.deviceId}`, options)
+  this.http.get(`${apiBase}/api/devices/${this.deviceId}`, options)
       .subscribe({
         next: (response: any) => {
           this.device = response;
@@ -793,7 +794,7 @@ export class DeviceDetailComponent implements OnInit {
       options.headers = this.getHeaders();
     }
 
-    this.http.get(`${environment.apiUrl}/api/operations?deviceId=${this.deviceId}`, options)
+  this.http.get(`${apiBase}/api/operations?deviceId=${this.deviceId}`, options)
       .subscribe({
         next: (response: any) => {
           this.operations = response.sort((a: any, b: any) => {

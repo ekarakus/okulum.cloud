@@ -1,5 +1,6 @@
 import { Component, OnInit, AfterViewInit, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { apiBase } from '../runtime-config';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -184,7 +185,7 @@ export class LocationListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      let url = `${environment.apiUrl}/api/locations`;
+  let url = `${apiBase}/api/locations`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }
@@ -317,7 +318,7 @@ export class LocationListComponent implements OnInit, AfterViewInit {
         ...formData,
         school_id: this.selectedSchool?.id
       };
-      this.http.post(`${environment.apiUrl}/api/locations`, payload, { headers }).subscribe({
+  this.http.post(`${apiBase}/api/locations`, payload, { headers }).subscribe({
         next: () => {
           this.refresh();
         },
@@ -330,7 +331,7 @@ export class LocationListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.put(`${environment.apiUrl}/api/locations/${id}`, formData, { headers }).subscribe({
+  this.http.put(`${apiBase}/api/locations/${id}`, formData, { headers }).subscribe({
         next: () => {
           this.refresh();
         },
@@ -342,7 +343,7 @@ export class LocationListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.delete(`${environment.apiUrl}/api/locations/${id}`, { headers }).subscribe({
+  this.http.delete(`${apiBase}/api/locations/${id}`, { headers }).subscribe({
         next: () => {
           this.refresh();
         },

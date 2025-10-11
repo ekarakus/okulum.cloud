@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../services/auth.service';
+import { apiBase } from '../runtime-config';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { environment } from '../../environments/environment';
 
@@ -107,7 +108,7 @@ export class ChangePasswordComponent {
   setTimeout(() => this.isSubmitting = true);
     let headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     headers = headers.set('Content-Type', 'application/json');
-    this.http.put(`${environment.apiUrl}/api/users/me/password`, { current_password: this.currentPassword, new_password: this.newPassword }, { headers }).subscribe({
+  this.http.put(`${apiBase}/api/users/me/password`, { current_password: this.currentPassword, new_password: this.newPassword }, { headers }).subscribe({
       next: () => {
         // schedule state changes after the current change detection cycle
         setTimeout(() => {

@@ -1,5 +1,6 @@
 import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { apiBase } from '../runtime-config';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -163,7 +164,7 @@ export class FeatureListComponent implements OnInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.get<any[]>(`${environment.apiUrl}/api/features`, { headers }).subscribe({
+  this.http.get<any[]>(`${apiBase}/api/features`, { headers }).subscribe({
         next: data => {
           this.features = data;
           this.pageIndex = 0;
@@ -271,7 +272,7 @@ export class FeatureListComponent implements OnInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.post(`${environment.apiUrl}/api/features`, formData, { headers }).subscribe({
+  this.http.post(`${apiBase}/api/features`, formData, { headers }).subscribe({
         next: () => {
           this.loadFeatures();
           this.snackBar.open('Özellik başarıyla eklendi', 'Kapat', { duration: 3000 });
@@ -288,7 +289,7 @@ export class FeatureListComponent implements OnInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.put(`${environment.apiUrl}/api/features/${id}`, formData, { headers }).subscribe({
+  this.http.put(`${apiBase}/api/features/${id}`, formData, { headers }).subscribe({
         next: () => {
           this.loadFeatures();
           this.snackBar.open('Özellik başarıyla güncellendi', 'Kapat', { duration: 3000 });
@@ -306,7 +307,7 @@ export class FeatureListComponent implements OnInit {
       const token = this.getToken();
       if (token) {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-        this.http.delete(`${environment.apiUrl}/api/features/${id}`, { headers }).subscribe({
+  this.http.delete(`${apiBase}/api/features/${id}`, { headers }).subscribe({
           next: () => {
             this.loadFeatures();
             this.snackBar.open('Özellik başarıyla silindi', 'Kapat', { duration: 3000 });

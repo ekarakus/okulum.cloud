@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { OperationAddEditDialogComponent } from '../operation-add-edit-dialog/operation-add-edit-dialog.component';
-import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -40,11 +40,11 @@ import { AuthService } from '../services/auth.service';
       <mat-card class="filter-card" style="margin-bottom:1rem;">
         <div class="filters" style="padding: 12px; display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end;">
           <div style="min-width:240px;">
-            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Arama (İşlem Türü / Cihaz / Teknisyen)</label>
+            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Arama (İşlem Türü / Demirbaş / Teknisyen)</label>
             <input type="text" [(ngModel)]="searchText" (input)="applyFilters()" placeholder="Ara..." style="padding:6px; width:100%; border:1px solid #ccc; border-radius:4px;" />
           </div>
           <div style="min-width:220px;">
-            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Cihaz Filtresi</label>
+            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Demirbaş Filtresi</label>
             <select [(ngModel)]="filterDeviceId" (change)="applyFilters()" style="padding:6px; width:100%; border:1px solid #ccc; border-radius:4px;">
               <option [ngValue]="null">Tümü</option>
               <option *ngFor="let d of devices" [ngValue]="d.id">{{d.name}} ({{d.identity_no}})</option>
@@ -93,7 +93,7 @@ import { AuthService } from '../services/auth.service';
           <table style="width:100%; border-collapse: collapse;">
           <thead>
             <tr style="background-color: #f5f5f5;">
-              <th (click)="onHeaderClick('device')" style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd; cursor:pointer">Cihaz
+              <th (click)="onHeaderClick('device')" style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd; cursor:pointer">Demirbaş
                 <mat-icon *ngIf="sort.field==='device'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
               </th>
               <th (click)="onHeaderClick('operation_type')" style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd; cursor:pointer">İşlem Türü
@@ -116,7 +116,7 @@ import { AuthService } from '../services/auth.service';
           </thead>
           <tbody>
             <tr *ngFor="let o of pagedOperations" style="border-bottom: 1px solid #eee;">
-              <td style="padding: 4px 12px;">{{o.Device ? (o.Device.name + ' (' + o.Device.identity_no + ')') : 'Bilinmeyen Cihaz'}}</td>
+              <td style="padding: 4px 12px;">{{o.Device ? (o.Device.name + ' (' + o.Device.identity_no + ')') : 'Bilinmeyen Demirbaş'}}</td>
               <td style="padding: 4px 12px;">{{o.OperationType ? o.OperationType.name : 'Bilinmeyen Tür'}}</td>
               <td style="padding: 4px 12px;">{{o.description}}</td>
               <td style="padding: 4px 12px;">{{o.date || o.createdAt | date:'dd/MM/yyyy HH:mm'}}</td>
@@ -259,7 +259,7 @@ export class OperationListComponent implements OnInit {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
       // Okul filtresi ekle - SÜPER ADMİN DAHİL HERKES SEÇİLİ OKULA GÖRE FİLTRELENECEK
-      let url = `${environment.apiUrl}/api/operations`;
+  let url = `${apiBase}/api/operations`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }
@@ -282,7 +282,7 @@ export class OperationListComponent implements OnInit {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
       // Load devices filtered by selected school
-      let devicesUrl = `${environment.apiUrl}/api/devices`;
+  let devicesUrl = `${apiBase}/api/devices`;
       if (this.selectedSchool) {
         devicesUrl += `?school_id=${this.selectedSchool.id}`;
       }
@@ -292,13 +292,13 @@ export class OperationListComponent implements OnInit {
       });
 
       // Load operation types from API
-      this.http.get<any[]>(`${environment.apiUrl}/api/operation-types`, { headers }).subscribe({
+  this.http.get<any[]>(`${apiBase}/api/operation-types`, { headers }).subscribe({
         next: data => { this.operationTypes = data; this.cdr.detectChanges(); },
         error: err => console.error('Error loading operation types:', err)
       });
 
       // Load technicians filtered by selected school
-      let techUrl = `${environment.apiUrl}/api/technicians`;
+  let techUrl = `${apiBase}/api/technicians`;
       if (this.selectedSchool) {
         techUrl += `?school_id=${this.selectedSchool.id}`;
       }
@@ -354,7 +354,7 @@ export class OperationListComponent implements OnInit {
       if (this.selectedSchool?.id) {
         formData.school_id = this.selectedSchool.id;
       }
-      this.http.post(`${environment.apiUrl}/api/operations`, formData, { headers }).subscribe({
+  this.http.post(`${apiBase}/api/operations`, formData, { headers }).subscribe({
         next: () => {
           this.loadOperations();
         },
@@ -371,7 +371,7 @@ export class OperationListComponent implements OnInit {
       if (this.selectedSchool?.id) {
         formData.school_id = this.selectedSchool.id;
       }
-      this.http.put(`${environment.apiUrl}/api/operations/${id}`, formData, { headers }).subscribe({
+  this.http.put(`${apiBase}/api/operations/${id}`, formData, { headers }).subscribe({
         next: () => {
           this.loadOperations();
         },
@@ -385,7 +385,7 @@ export class OperationListComponent implements OnInit {
       const token = this.getToken();
       if (token) {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-        this.http.delete(`${environment.apiUrl}/api/operations/${id}`, { headers }).subscribe({
+  this.http.delete(`${apiBase}/api/operations/${id}`, { headers }).subscribe({
           next: () => {
             this.loadOperations();
             alert('İşlem başarıyla silindi!');
@@ -535,7 +535,7 @@ export class OperationListComponent implements OnInit {
     const activeFilters: string[] = [];
     if (this.filterDeviceId) {
       const dev = this.devices.find(d => d.id === this.filterDeviceId);
-      if (dev) activeFilters.push(`Cihaz: ${dev.name} (${dev.identity_no || ''})`);
+  if (dev) activeFilters.push(`Demirbaş: ${dev.name} (${dev.identity_no || ''})`);
     }
     if (this.filterOperationTypeId) {
       const opT = this.operationTypes.find(t => t.id === this.filterOperationTypeId);
@@ -587,7 +587,7 @@ export class OperationListComponent implements OnInit {
     <h1 class=\"report-title\">${schoolName} - İşlemler Raporu</h1>
     <div class=\"meta\">Toplam Kayıt: ${this.filteredOperations.length} | Oluşturulma: ${generatedAt}</div>
     ${filtersHtml}
-    <table><thead><tr><th>Cihaz</th><th>İşlem Türü</th><th>Açıklama</th><th>Tarih</th><th>Teknisyen</th><th>Durum</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+  <table><thead><tr><th>Demirbaş</th><th>İşlem Türü</th><th>Açıklama</th><th>Tarih</th><th>Teknisyen</th><th>Durum</th></tr></thead><tbody>${rowsHtml}</tbody></table>
     <div class=\"footer-url\">Kaynak: ${desiredUrl}</div>
     <script>window.print(); setTimeout(()=>window.close(), 300);</script>
     </body></html>`;

@@ -1,3 +1,4 @@
+const config = require('../../config');
 const { Device, Feature, DeviceFeature, School } = require('../models/relations');
 const { Location, DeviceType } = require('../models/relations');
 const QRCode = require('qrcode');
@@ -157,8 +158,9 @@ exports.getById = async (req, res) => {
       return res.status(404).json({ message: 'Cihaz bulunamadı' });
     }
     
-    // QR kod oluştur - URL ile birlikte
-    const deviceUrl = `http://localhost:4201/device-detail/${device.id}`;
+  // QR kod oluştur - URL ile birlikte (FRONTEND_BASE_URL must be provided in env)
+  if (!config.frontendBaseUrl) throw new Error('FRONTEND_BASE_URL is required to generate device URLs');
+  const deviceUrl = `${config.frontendBaseUrl.replace(/\/$/, '')}/device-detail/${device.id}`;
     const qr_code = await QRCode.toDataURL(deviceUrl, {
       width: 200,
       margin: 2,
@@ -252,8 +254,9 @@ exports.create = async (req, res) => {
       ]
     });
     
-    // QR kod üret - URL ile birlikte
-    const deviceUrl = `http://localhost:4201/device-detail/${device.id}`;
+  // QR kod üret - URL ile birlikte
+  if (!config.frontendBaseUrl) throw new Error('FRONTEND_BASE_URL is required to generate device URLs');
+  const deviceUrl = `${config.frontendBaseUrl.replace(/\/$/, '')}/device-detail/${device.id}`;
     const qr = await QRCode.toDataURL(deviceUrl, {
       width: 200,
       margin: 2,
@@ -358,7 +361,8 @@ exports.getQR = async (req, res) => {
   if (!device) return res.status(404).json({ message: 'Cihaz bulunamadı' });
   
   // QR kod üret - URL ile birlikte
-  const deviceUrl = `http://localhost:4201/device-detail/${device.id}`;
+  if (!config.frontendBaseUrl) throw new Error('FRONTEND_BASE_URL is required to generate device URLs');
+  const deviceUrl = `${config.frontendBaseUrl.replace(/\/$/, '')}/device-detail/${device.id}`;
   const qr = await QRCode.toDataURL(deviceUrl, {
     width: 200,
     margin: 2,

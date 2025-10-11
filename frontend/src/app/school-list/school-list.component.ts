@@ -14,7 +14,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../services/auth.service';
-import { environment } from '../../environments/environment';
+import { apiBase } from '../runtime-config';
 import { SchoolDialogComponent, SchoolDialogData } from '../school-dialog/school-dialog.component';
 
 interface School {
@@ -95,7 +95,7 @@ interface School {
             </div>
             <div class="stat-text">
               <div class="stat-number">{{ getTotalDevices() }}</div>
-              <div class="stat-label">Toplam Cihaz</div>
+              <div class="stat-label">Toplam Demirbaş</div>
             </div>
           </div>
         </mat-card>
@@ -147,7 +147,7 @@ interface School {
                   </div>
                   <div class="chip devices">
                     <mat-icon fontSet="material-symbols-outlined">laptop</mat-icon>
-                    {{ school.deviceCount || 0 }} cihaz
+                    {{ school.deviceCount || 0 }} demirbaş
                   </div>
                 </div>
               </td>
@@ -644,7 +644,7 @@ export class SchoolListComponent implements OnInit, OnDestroy {
 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
-    this.http.get<School[]>(`${environment.apiUrl}/api/schools`, { headers })
+  this.http.get<School[]>(`${apiBase}/api/schools`, { headers })
       .subscribe({
         next: (schools) => {
           this.schools = schools;
@@ -771,13 +771,13 @@ export class SchoolListComponent implements OnInit, OnDestroy {
     let request$;
     if (schoolData.id) {
       // Güncelleme
-      request$ = this.http.put(`${environment.apiUrl}/api/schools/${schoolData.id}`, {
+  request$ = this.http.put(`${apiBase}/api/schools/${schoolData.id}`, {
         name: schoolData.name,
         code: schoolData.code
       }, { headers });
     } else {
       // Yeni ekleme
-      request$ = this.http.post(`${environment.apiUrl}/api/schools`, {
+  request$ = this.http.post(`${apiBase}/api/schools`, {
         name: schoolData.name,
         code: schoolData.code
       }, { headers });
@@ -808,7 +808,7 @@ export class SchoolListComponent implements OnInit, OnDestroy {
       if (!token) return;
 
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.delete(`${environment.apiUrl}/api/schools/${school.id}`, { headers })
+  this.http.delete(`${apiBase}/api/schools/${school.id}`, { headers })
         .subscribe({
           next: () => {
             this.loadSchools();

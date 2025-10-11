@@ -1,4 +1,5 @@
 import { Component, OnInit, AfterViewInit, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
+import { apiBase } from '../runtime-config';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -153,7 +154,7 @@ export class OperationTypeListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.get<any[]>(`${environment.apiUrl}/api/operation-types`, { headers }).subscribe({
+  this.http.get<any[]>(`${apiBase}/api/operation-types`, { headers }).subscribe({
         next: data => {
           this.operationTypes = data;
           this.pageIndex = 0;
@@ -261,7 +262,7 @@ export class OperationTypeListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.post(`${environment.apiUrl}/api/operation-types`, formData, { headers }).subscribe({
+  this.http.post(`${apiBase}/api/operation-types`, formData, { headers }).subscribe({
         next: () => {
           this.refresh();
         },
@@ -274,7 +275,7 @@ export class OperationTypeListComponent implements OnInit, AfterViewInit {
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-      this.http.put(`${environment.apiUrl}/api/operation-types/${id}`, formData, { headers }).subscribe({
+  this.http.put(`${apiBase}/api/operation-types/${id}`, formData, { headers }).subscribe({
         next: () => {
           this.refresh();
         },
@@ -288,7 +289,7 @@ export class OperationTypeListComponent implements OnInit, AfterViewInit {
       const token = this.getToken();
       if (token) {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-        this.http.delete(`${environment.apiUrl}/api/operation-types/${operationType.id}`, { headers }).subscribe({
+  this.http.delete(`${apiBase}/api/operation-types/${operationType.id}`, { headers }).subscribe({
           next: () => {
             this.refresh();
           },
