@@ -5,6 +5,7 @@ const SchoolEmployee = sequelize.define('SchoolEmployee', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   school_id: { type: DataTypes.INTEGER, allowNull: false },
   name: { type: DataTypes.STRING, allowNull: false },
+  branch: { type: DataTypes.STRING, allowNull: true },//personel branşı
   email: { type: DataTypes.STRING, allowNull: true },
   employee_type_id: { type: DataTypes.INTEGER, allowNull: true }
 }, {

@@ -21,15 +21,22 @@ import { SchoolEmployeeService } from '../services/school-employee.service';
           <mat-label>Ad Soyad</mat-label>
           <input matInput formControlName="name" />
         </mat-form-field>
+
         <mat-form-field appearance="outline" style="width:100%">
-          <mat-label>Email</mat-label>
-          <input matInput formControlName="email" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" style="width:100%">
-          <mat-label>Personel Tipi</mat-label>
+          <mat-label>Görevi</mat-label>
           <mat-select formControlName="employee_type_id">
             <mat-option *ngFor="let t of types" [value]="t.id">{{ t.name }}</mat-option>
           </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Branş</mat-label>
+          <input matInput formControlName="branch" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>E-mail</mat-label>
+          <input matInput formControlName="email" />
         </mat-form-field>
       </mat-dialog-content>
       <mat-dialog-actions align="end">
@@ -52,7 +59,7 @@ export class SchoolEmployeeDialogComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.form = this.fb.group({ name: ['', Validators.required], email: [''], employee_type_id: [null] });
+    this.form = this.fb.group({ name: ['', Validators.required], email: [''], branch: [''], employee_type_id: [null] });
     this.typeSvc.list().subscribe({ next: (res) => this.types = res || [] });
     if (this.data.mode === 'edit' && this.data.employee) {
       this.form.patchValue(this.data.employee);

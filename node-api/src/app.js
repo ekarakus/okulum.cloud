@@ -85,6 +85,10 @@ app.use('/api/employee-types', employeeTypeRouter);
 const schoolEmployeeRouter = require('./routes/schoolEmployeeRoutes');
 app.use('/api/school-employees', schoolEmployeeRouter);
 
+// School employees bulk upload
+const schoolEmployeeUploadRouter = require('./routes/schoolEmployeeUploadRoutes');
+app.use('/api/school-employees/upload', schoolEmployeeUploadRouter);
+
 // Report routes
 const reportRouter = require('./routes/report');
 app.use('/api/reports', reportRouter);
@@ -110,17 +114,22 @@ const PORT = process.env.PORT || 3000;
     await sequelize.authenticate();
     console.log('Database connection has been established successfully.');
     
-    // Then sync the database
-    try {
-      await sequelize.sync({ alter: true });
-      console.log('Database synced successfully');
-    } catch (syncErr) {
-      // Some MySQL servers may reject large alter operations (e.g., Too many keys specified)
-      if (syncErr && /Too many keys specified/i.test(syncErr.message || '')) {
-        console.warn('Database sync (alter) failed due to key/index limits. Continuing without sync.\n', syncErr.message);
-      } else {
-        throw syncErr;
+    // Optionally sync the database schema when DB_SYNC=true (opt-in).
+    // This prevents accidental schema changes on every server start in production.
+    if (process.env.DB_SYNC && process.env.DB_SYNC.toLowerCase() === 'true') {
+      try {
+        await sequelize.sync({ alter: true });
+        console.log('Database synced successfully (DB_SYNC=true)');
+      } catch (syncErr) {
+        // Some MySQL servers may reject large alter operations (e.g., Too many keys specified)
+        if (syncErr && /Too many keys specified/i.test(syncErr.message || '')) {
+          console.warn('Database sync (alter) failed due to key/index limits. Continuing without sync.\n', syncErr.message);
+        } else {
+          throw syncErr;
+        }
       }
+    } else {
+      console.log('DB sync skipped (set DB_SYNC=true to enable automatic sequelize.sync on start)');
     }
   } catch (error) {
     console.error('Database connection/sync error:', error.message);

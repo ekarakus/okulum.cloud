@@ -9,6 +9,8 @@
   "db:sync-user-permissions": "node scripts/sync-user-permissions.js",
   "db:sync-employee-types": "node scripts/sync-employee-types.js",
   "db:sync-school-employees": "node scripts/sync-school-employees.js",
+  "db:fix-duplicate-indexes": "node scripts/fix-duplicate-indexes.js",
+  "db:upload-test": "node scripts/placeholder.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -26,5 +28,7 @@
     "qrcode": "^1.5.4",
     "sequelize": "^6.37.7",
     "nodemailer": "^6.9.13"
+    ,"multer": "^1.4.5-lts.1",
+    "xlsx": "^0.18.5"
   }
 }

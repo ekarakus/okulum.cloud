@@ -1,18 +1,24 @@
 import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
-import { MatTableModule } from '@angular/material/table';
+import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSortModule, MatSort } from '@angular/material/sort';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { ViewChild, AfterViewInit } from '@angular/core';
+import { SubscriptionLike } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { EmployeeTypeService } from '../services/employee-type.service';
 import { ChangeDetectorRef } from '@angular/core';
 import { apiBase } from '../runtime-config';
 import { SchoolEmployeeService } from '../services/school-employee.service';
@@ -39,7 +45,7 @@ const _styles = `
 @Component({
   selector: 'app-school-employees',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatTooltipModule],
+  imports: [CommonModule, MatCardModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSortModule, MatTooltipModule],
   styles: [_styles],
   template: `
     <div class="container">
@@ -59,6 +65,10 @@ const _styles = `
               <mat-icon fontSet="material-symbols-outlined">list</mat-icon>
               Personel Tipleri
             </button>
+            <button mat-stroked-button (click)="openUpload()" class="types-btn">
+              <mat-icon fontSet="material-symbols-outlined">file_upload</mat-icon>
+              XLS
+            </button>
               <button mat-raised-button color="primary" (click)="openAdd()" class="add-btn" [disabled]="!auth.getSelectedSchool()">
                 <mat-icon fontSet="material-symbols-outlined">person_add</mat-icon>
                 Yeni Personel
@@ -68,24 +78,41 @@ const _styles = `
 
         <mat-card class="table-card">
           <div class="table-container">
-          <table mat-table [dataSource]="employees" class="employees-table" *ngIf="employees.length>0; else emptyState">
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+              <mat-form-field appearance="outline" style="width:520px;">
+                <input matInput placeholder="Ara (Ad/Görev/Branş/E-mail)" (input)="applyGlobalFilter($any($event.target).value)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" style="width:220px;">
+                <mat-select placeholder="Görevi filtre" (selectionChange)="applyFieldFilter('type', $any($event.value))">
+                  <mat-option [value]="''">Tümü</mat-option>
+                  <mat-option *ngFor="let t of types" [value]="t.name">{{ t.name }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+          <table mat-table [dataSource]="dataSource" class="employees-table" matSort *ngIf="(dataSource.data?.length || 0) > 0; else emptyState">
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef style="padding: 4px 12px; text-align: left;">Ad Soyad</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 4px 12px; text-align: left;">Ad Soyad</th>
               <td mat-cell *matCellDef="let e" style="padding: 4px 12px;">{{ e.name }}</td>
             </ng-container>
 
-            <ng-container matColumnDef="email">
-              <th mat-header-cell *matHeaderCellDef style="padding: 4px 12px; text-align: left;">E-posta</th>
-              <td mat-cell *matCellDef="let e" style="padding: 4px 12px;">{{ e.email || '-' }}</td>
-            </ng-container>
-
             <ng-container matColumnDef="type">
-              <th mat-header-cell *matHeaderCellDef style="padding: 4px 12px; text-align: left;">Tip</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 4px 12px; text-align: left;">Görevi</th>
               <td mat-cell *matCellDef="let e" style="padding: 4px 12px;">{{ e.EmployeeType?.name || '-' }}</td>
             </ng-container>
 
+            <ng-container matColumnDef="branch">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 4px 12px; text-align: left;">Branş</th>
+              <td mat-cell *matCellDef="let e" style="padding: 4px 12px;">{{ e.branch || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="email">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 4px 12px; text-align: left;">E-mail</th>
+              <td mat-cell *matCellDef="let e" style="padding: 4px 12px;">{{ e.email || '-' }}</td>
+            </ng-container>
+
             <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef style="padding: 4px 12px; text-align: left;">İşlem</th>
+              <th mat-header-cell *matHeaderCellDef style="padding: 4px 12px; text-align: left;">işlem</th>
               <td mat-cell *matCellDef="let e" style="padding: 4px 12px;">
                 <button mat-button color="accent" (click)="edit(e)" style="margin-right:6px;">
                   <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
@@ -118,9 +145,50 @@ const _styles = `
 })
 export class SchoolEmployeesComponent implements OnInit, OnDestroy {
   employees: any[] = [];
-  displayedColumns = ['name','email','type','actions'];
+  types: any[] = [];
+  displayedColumns = ['name','type','branch','email','actions'];
+  dataSource: MatTableDataSource<any> = new MatTableDataSource<any>([]);
   private sub?: Subscription;
-  constructor(private http: HttpClient, public auth: AuthService, private dialog: MatDialog, private empSvc: SchoolEmployeeService, private router: Router, @Inject(PLATFORM_ID) private platformId: Object, private cdr: ChangeDetectorRef) {}
+  private sortSub?: Subscription;
+  // internal MatSort holder used by ViewChild setter
+  private _matSort?: MatSort;
+  // filters
+  filterValues: any = { global: '', name: '', type: '', branch: '' };
+  @ViewChild(MatSort) set matSort(ms: MatSort | undefined) {
+    this._matSort = ms;
+    if (this._matSort) {
+      // attach the MatSort to the data source and ensure subscription
+      try { this.dataSource.sort = this._matSort; } catch (e) { /* ignore */ }
+      this.attachSortSubscription();
+      this.cdr.detectChanges();
+    }
+  }
+  get sort(): MatSort | undefined { return this._matSort; }
+  constructor(private http: HttpClient, public auth: AuthService, private dialog: MatDialog, private empSvc: SchoolEmployeeService, private empTypeSvc: EmployeeTypeService, private router: Router, @Inject(PLATFORM_ID) private platformId: Object, private cdr: ChangeDetectorRef) {
+    // custom filter predicate: filter is JSON string of filterValues
+    this.dataSource.filterPredicate = (data: any, filter: string) => {
+      try {
+        const f = JSON.parse(filter);
+        const global = (f.global || '').toString().toLowerCase();
+        const nameFilter = (f.name || '').toString().toLowerCase();
+        const typeFilter = (f.type || '').toString().toLowerCase();
+        const branchFilter = (f.branch || '').toString().toLowerCase();
+
+        const name = (data.name || '').toString().toLowerCase();
+        const type = (data.EmployeeType?.name || '').toString().toLowerCase();
+        const branch = (data.branch || '').toString().toLowerCase();
+
+        const globalMatch = !global || name.indexOf(global) !== -1 || type.indexOf(global) !== -1 || branch.indexOf(global) !== -1 || (data.email || '').toString().toLowerCase().indexOf(global) !== -1;
+        const nameMatch = !nameFilter || name.indexOf(nameFilter) !== -1;
+  const typeMatch = !typeFilter || type === typeFilter;
+        const branchMatch = !branchFilter || branch.indexOf(branchFilter) !== -1;
+
+        return globalMatch && nameMatch && typeMatch && branchMatch;
+      } catch (e) {
+        return true;
+      }
+    };
+  }
   private getToken(): string | null { if (isPlatformBrowser(this.platformId)) return localStorage.getItem('token'); return null; }
 
   goToDashboard() { this.router.navigate(['/']); }
@@ -145,14 +213,92 @@ export class SchoolEmployeesComponent implements OnInit, OnDestroy {
         this.employees = [];
       }
     });
+
+    // load employee types for filter dropdown (reuse existing token)
+    if (token) {
+      this.empTypeSvc.list().subscribe({ next: (res) => { this.types = res || []; }, error: () => { this.types = []; } });
+    }
   }
 
   ngOnDestroy(): void {
     if (this.sub) this.sub.unsubscribe();
+    if (this.sortSub) this.sortSub.unsubscribe();
   }
 
-  load(schoolId: number) {
-    this.empSvc.listBySchool(schoolId).subscribe({ next: (res) => { this.employees = res || []; this.cdr.detectChanges(); }, error: (err) => console.error(err) });
+  ngAfterViewInit(): void {
+    // attach sort accessor for client side fallback
+    this.dataSource.sortingDataAccessor = (item: any, property: string) => {
+      if (property === 'type') return item.EmployeeType?.name || '';
+      if (property === 'name') return item.name || '';
+      if (property === 'branch') return item.branch || '';
+      if (property === 'email') return item.email || '';
+      return item[property];
+    };
+    // Use Turkish locale-aware sorting for client-side sorting
+    this.dataSource.sortData = (data: any[], sort) => {
+      if (!sort || !sort.active) return data;
+      const active = sort.active;
+      const direction = sort.direction === 'desc' ? -1 : 1;
+      return data.sort((a: any, b: any) => {
+        let av = this.dataSource.sortingDataAccessor(a, active) || '';
+        let bv = this.dataSource.sortingDataAccessor(b, active) || '';
+        // Ensure string comparison and fallback for non-string types
+        av = (av === null || av === undefined) ? '' : av.toString();
+        bv = (bv === null || bv === undefined) ? '' : bv.toString();
+        // localeCompare with Turkish locale
+        return av.localeCompare(bv, 'tr') * direction;
+      });
+    };
+    // If MatSort is present at this lifecycle hook, subscribe to sort changes.
+    if (this.sort) {
+      this.attachSortSubscription();
+    }
+  }
+
+  private attachSortSubscription() {
+    if (!this.sort) return;
+    if (this.sortSub) return; // already subscribed
+    // ensure dataSource has the MatSort reference
+    try { this.dataSource.sort = this.sort; } catch (e) { /* ignore */ }
+    this.sortSub = this.sort!.sortChange.subscribe((sortEvent) => {
+      const school = this.auth.getSelectedSchool();
+      if (!school) return;
+      const sortField = sortEvent.active;
+      const sortDir = sortEvent.direction || 'asc';
+      this.load(school.id, { sortField, sortDir, type: this.filterValues.type || '', search: this.filterValues.global || '' });
+    });
+  }
+
+  load(schoolId: number, params?: any) {
+    this.empSvc.listBySchool(schoolId, params).subscribe({ next: (res) => {
+      // res may be an array or an HttpEvent/HttpResponse; normalize to array
+      const data = Array.isArray(res) ? res : (res && (res as any).body && Array.isArray((res as any).body) ? (res as any).body : []);
+      this.employees = data || [];
+      this.dataSource.data = this.employees;
+      // ensure sort is attached for client-side fallback
+        try { this.dataSource.sort = this.sort; } catch (e) { /* ignore */ }
+        // if MatSort became available after data loaded, attach subscription
+        if (this.sort) this.attachSortSubscription();
+        // Apply client-side filter so the UI filters immediately even if server doesn't
+        try { this.dataSource.filter = JSON.stringify(this.filterValues); } catch (e) { /* ignore */ }
+      this.cdr.detectChanges();
+    }, error: (err) => console.error(err) });
+  }
+
+  // Filter helpers
+  applyGlobalFilter(value: string) {
+    this.filterValues.global = (value || '').trim();
+    // apply client-side filter immediately
+    try { this.dataSource.filter = JSON.stringify(this.filterValues); } catch (e) { /* ignore */ }
+    // server-side search: reload list (if supported)
+    const school = this.auth.getSelectedSchool(); if (school) this.load(school.id, { type: this.filterValues.type || '', search: this.filterValues.global });
+  }
+
+  applyFieldFilter(field: string, value: string) {
+    this.filterValues[field] = (value || '').trim();
+    // apply client-side filter immediately
+    try { this.dataSource.filter = JSON.stringify(this.filterValues); } catch (e) { /* ignore */ }
+    const school = this.auth.getSelectedSchool(); if (school) this.load(school.id, { type: this.filterValues.type || '', search: this.filterValues.global });
   }
 
   openAdd() {
@@ -174,6 +320,13 @@ export class SchoolEmployeesComponent implements OnInit, OnDestroy {
 
   openTypes() {
     this.router.navigate(['/employee-types']);
+  }
+
+  openUpload() {
+    import('../school-employees-upload-dialog/school-employees-upload-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.SchoolEmployeesUploadDialogComponent, { width: '700px' });
+      dialogRef.afterClosed().subscribe((r: any) => { const school = this.auth.getSelectedSchool(); if (r && r.inserted && school) this.load(school.id); });
+    }).catch(err => console.error('Failed to load upload dialog', err));
   }
 
 
