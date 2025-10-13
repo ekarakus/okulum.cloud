@@ -21,7 +21,8 @@ export interface SchoolDialogData {
     district_id?: number | null;
     school_type?: string | null;
     is_double_shift?: boolean | null;
-    start_time?: string | null;
+      start_time?: string | null;
+      lunch_start_time?: string | null;
     lesson_duration_minutes?: number | null;
     break_duration_minutes?: number | null;
     logo_path?: string | null;
@@ -128,10 +129,23 @@ export interface SchoolDialogData {
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Sabah İlk Ders Başlama Saati</mat-label>
             <mat-select formControlName="start_time">
-              <mat-option *ngFor="let t of times" [value]="t">{{ t }}</mat-option>
+              <mat-option *ngFor="let t of morningTimes" [value]="t">{{ t }}</mat-option>
             </mat-select>
             <mat-error *ngIf="schoolForm.get('start_time')?.hasError('required')">Başlangıç saati zorunludur</mat-error>
           </mat-form-field>
+
+
+
+
+              <div class="lunch-container" [class.visible]="schoolForm.get('is_double_shift')?.value" [class.highlight]="lunchHighlight">
+                <mat-form-field appearance="outline" class="form-field lunch-field">
+                  <mat-label>Öğlen Ders Başlama Saati</mat-label>
+                  <mat-select formControlName="lunch_start_time">
+                    <mat-option [value]="null">-- Seçiniz --</mat-option>
+                    <mat-option *ngFor="let t of lunchTimes" [value]="t">{{ t }}</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
 
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Ders Süresi (dakika)</mat-label>
@@ -178,6 +192,11 @@ export interface SchoolDialogData {
     .dialog-container {
       width: 100%;
       max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      /* ensure dialog actions stay at bottom */
+      height: 100%;
+      max-height: 80vh;
     }
 
     .dialog-header {
@@ -201,6 +220,9 @@ export interface SchoolDialogData {
     .dialog-content {
       padding: 1rem 1.5rem;
       min-height: 200px;
+      /* allow fields inside to overflow visually when they animate (floating labels) */
+      overflow: auto;
+      flex: 1 1 auto; /* let content grow and scroll if needed */
     }
 
     .school-form {
@@ -220,6 +242,9 @@ export interface SchoolDialogData {
       gap: 1rem;
       border-top: 1px solid #e0e0e0;
       background: #f8f9fa;
+      /* push actions to the bottom when container is column flex */
+      margin-top: auto;
+      flex-shrink: 0;
     }
 
     .cancel-button {
@@ -265,6 +290,41 @@ export interface SchoolDialogData {
         width: 100%;
       }
     }
+    .lunch-container {
+      max-height: 0;
+      /* allow visual overflow when revealed so box-shadow and slide aren't clipped */
+      overflow: visible;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: max-height 280ms ease, opacity 280ms ease, transform 280ms ease;
+      will-change: opacity, transform;
+      position: relative; /* create stacking context for z-index */
+      z-index: 1;
+    }
+    .lunch-container.visible {
+      max-height: 200px; /* big enough to show the select */
+      opacity: 1;
+      transform: translateY(0);
+      /* bring above surrounding elements so the reveal is fully visible */
+      z-index: 40;
+      /* ensure floating label has room and isn't clipped at the top */
+      padding-top: 8px;
+    }
+    /* raise floating label above surrounding elements when inside the lunch container */
+    .lunch-container .mat-mdc-form-field-floating-label,
+    .lunch-container .mat-form-field-label,
+    .lunch-container .mdc-floating-label {
+      z-index: 60;
+    }
+    /* apply highlight to container so shadow isn't clipped by inner overflow */
+    .lunch-container.highlight {
+      animation: lunch-pulse 850ms ease;
+    }
+    @keyframes lunch-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.0); }
+      30% { box-shadow: 0 6px 18px 4px rgba(255, 193, 7, 0.22); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+    }
   `]
 })
 export class SchoolDialogComponent implements OnInit {
@@ -273,6 +333,10 @@ export class SchoolDialogComponent implements OnInit {
   provinces: Array<any> = [];
   districts: Array<any> = [];
   times: string[] = [];
+  morningTimes: string[] = [];
+  lunchTimes: string[] = [];
+  // lunch field shown only when is_double_shift is true
+  lunchHighlight = false;
   uploadedFileName: string | null = null;
   uploadedPath: string | null = null;
   selectedFile: File | null = null;
@@ -292,7 +356,8 @@ export class SchoolDialogComponent implements OnInit {
       district_id: [null, [Validators.required]],
       school_type: ['ilk_okul', [Validators.required]],
       is_double_shift: [false],
-      start_time: ['08:00', [Validators.required]],
+    start_time: ['08:00', [Validators.required]],
+    lunch_start_time: [null],
       lesson_duration_minutes: [40, [Validators.required]],
       break_duration_minutes: [10, [Validators.required]],
       logo_path: [null]
@@ -309,6 +374,7 @@ export class SchoolDialogComponent implements OnInit {
         school_type: this.data.school.school_type ?? 'ilk_okul',
         is_double_shift: this.data.school.is_double_shift ?? false,
         start_time: this.data.school.start_time ?? '08:00',
+  lunch_start_time: this.data.school.lunch_start_time ?? null,
         lesson_duration_minutes: this.data.school.lesson_duration_minutes ?? 40,
         break_duration_minutes: this.data.school.break_duration_minutes ?? 10,
         logo_path: this.data.school.logo_path ?? null
@@ -322,7 +388,7 @@ export class SchoolDialogComponent implements OnInit {
 
     // Load provinces and times
     this.loadProvinces();
-    this.initTimes();
+  this.initTimes();
 
     // Code alanını büyük harfe çevir
     this.schoolForm.get('code')?.valueChanges.subscribe(value => {
@@ -331,6 +397,17 @@ export class SchoolDialogComponent implements OnInit {
         if (value !== upperValue) {
           this.schoolForm.get('code')?.setValue(upperValue, { emitEvent: false });
         }
+      }
+    });
+
+    // When is_double_shift changes, clear lunch_start_time when switched off
+    this.schoolForm.get('is_double_shift')?.valueChanges.subscribe(isDouble => {
+      if (!isDouble) {
+        this.schoolForm.get('lunch_start_time')?.setValue(null);
+      } else {
+        // briefly highlight the lunch field to draw attention
+        this.lunchHighlight = true;
+        setTimeout(() => this.lunchHighlight = false, 900);
       }
     });
   }
@@ -342,6 +419,8 @@ export class SchoolDialogComponent implements OnInit {
       const result = {
         ...formValue,
         id: this.data.school?.id,
+        // If not double-shift, ensure lunch_start_time is null
+        lunch_start_time: this.schoolForm.get('is_double_shift')?.value ? formValue.lunch_start_time : null,
         // logo_path will be set after upload if a new file was selected
         logo_path: this.uploadedPath || formValue.logo_path
       };
@@ -428,15 +507,49 @@ export class SchoolDialogComponent implements OnInit {
   }
 
   initTimes() {
-    // build times from 07:00 to 10:00 every 15 minutes
-    const times: string[] = [];
-    const start = 7 * 60; const end = 10 * 60;
-    for (let m = start; m <= end; m += 15) {
+    // Default morning times 06:00 - 10:00 every 15 minutes
+    this.morningTimes = this.buildTimeRange('06:00', '10:00', 15);
+    // Default lunch times 11:00 - 14:00 every 15 minutes
+    this.lunchTimes = this.buildTimeRange('11:00', '14:00', 15);
+    // times variable kept for compatibility where needed
+    this.times = [...this.morningTimes];
+  }
+
+  private buildTimeRange(from: string, to: string, stepMinutes: number) {
+    const parse = (t: string) => {
+      const [hh, mm] = t.split(':').map(x => parseInt(x,10));
+      return hh*60 + mm;
+    };
+    const start = parse(from);
+    const end = parse(to);
+    const out: string[] = [];
+    for (let m = start; m <= end; m += stepMinutes) {
       const hh = Math.floor(m/60).toString().padStart(2,'0');
       const mm = (m%60).toString().padStart(2,'0');
-      times.push(`${hh}:${mm}`);
+      out.push(`${hh}:${mm}`);
     }
-    this.times = times;
+    return out;
+  }
+  resetMorningDefaults() {
+    this.morningTimes = this.buildTimeRange('06:00','10:00',15);
+    this.schoolForm.get('start_time')?.setValue(this.morningTimes[0] || null);
+  }
+
+  resetLunchDefaults() {
+    this.lunchTimes = this.buildTimeRange('11:00','14:00',15);
+    this.schoolForm.get('lunch_start_time')?.setValue(this.lunchTimes[0] || null);
+  }
+
+  private isValidTime(t: string) {
+    return /^([01]?\d|2[0-3]):[0-5]\d$/.test(t);
+  }
+
+  removeLunchField() {
+    // legacy method removed
+  }
+
+  restoreLunchField() {
+    // legacy method removed
   }
 
   onFileSelected(ev: Event) {

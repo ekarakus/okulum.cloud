@@ -19,6 +19,15 @@ import { CommonModule } from '@angular/common';
     <h2 mat-dialog-title>{{ data.isNew ? 'Yeni Dönem Ekle' : 'Dönem Düzenle' }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form" (ngSubmit)="onSave()" (keydown.enter)="onFormEnter($event)">
+        <!-- Day selector moved to top for new entries -->
+        <ng-container *ngIf="data.isNew">
+          <mat-form-field style="width:100%">
+            <mat-label>Gün</mat-label>
+            <mat-select formControlName="day_of_week" [multiple]="true">
+              <mat-option *ngFor="let d of days" [value]="d.v">{{ d.name }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
         <mat-form-field style="width:100%">
           <mat-label>Dönem Adı</mat-label>
           <input matInput formControlName="period_name" />
@@ -47,12 +56,15 @@ import { CommonModule } from '@angular/common';
 
         <mat-checkbox formControlName="is_block">Block Ders</mat-checkbox>
 
-        <mat-form-field style="width:100%">
-          <mat-label>Gün</mat-label>
-          <mat-select formControlName="day_of_week" [multiple]="data.isNew">
-            <mat-option *ngFor="let d of days" [value]="d.v">{{ d.name }}</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <!-- keep the existing day field only for editing (single-select) -->
+        <ng-container *ngIf="!data.isNew">
+          <mat-form-field style="width:100%">
+            <mat-label>Gün</mat-label>
+            <mat-select formControlName="day_of_week" [multiple]="false">
+              <mat-option *ngFor="let d of days" [value]="d.v">{{ d.name }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
 
         <div style="display:none"><button type="submit"></button></div>
       </form>
@@ -67,6 +79,7 @@ export class SchoolTimeTableDialogComponent implements OnInit {
   form: FormGroup;
   suggestedStart: string | null = null;
   private userEditedStart = false;
+  private userEditedDuration = false;
   days = [
     { v: 1, name: 'Pazartesi' },
     { v: 2, name: 'Salı' },
@@ -84,12 +97,17 @@ export class SchoolTimeTableDialogComponent implements OnInit {
     , private auth: AuthService
   ) {
   const school = this.auth.getSelectedSchool();
-  const defaultLesson = data.entry?.duration_minutes ?? ((school as any)?.lesson_duration_minutes ?? 40);
+  // determine initial period type for default duration
+  const initialType = data.entry?.period_type || 'class';
+  const schoolLesson = (school as any)?.lesson_duration_minutes ?? 40;
+  const schoolBreak = (school as any)?.break_duration_minutes ?? 10;
+  const schoolLunch = (school as any)?.lunch_duration_minutes ?? 30;
+  const defaultDuration = data.entry?.duration_minutes ?? (initialType === 'break' ? schoolBreak : initialType === 'lunch' ? schoolLunch : schoolLesson);
     this.form = this.fb.group({
   period_name: [data.entry?.period_name || '', Validators.required],
   period_type: [data.entry?.period_type || 'class', Validators.required],
   start_time: [data.entry?.start_time ? this.formatTime(data.entry.start_time) : '08:00', Validators.required],
-      duration_minutes: [defaultLesson, [Validators.required]],
+      duration_minutes: [defaultDuration, [Validators.required]],
       is_block: [data.entry?.is_block || false],
       block_id: [data.entry?.block_id || null],
       day_of_week: [data.isNew ? (data.entry?.day_of_week ? [data.entry.day_of_week] : []) : (data.entry?.day_of_week || 1), Validators.required]
@@ -97,10 +115,30 @@ export class SchoolTimeTableDialogComponent implements OnInit {
 
     // react to selected school change so duration default updates if needed
     this.auth.selectedSchool$.subscribe(s => {
-      if (!data.entry) {
-        const val = (s as any)?.lesson_duration_minutes ?? 40;
-        this.form.get('duration_minutes')?.setValue(val);
+      if (!this.userEditedDuration) {
+        const lesson = (s as any)?.lesson_duration_minutes ?? 40;
+        const br = (s as any)?.break_duration_minutes ?? 10;
+        const lu = (s as any)?.lunch_duration_minutes ?? 30;
+        const type = this.form.get('period_type')?.value || 'class';
+        const val = type === 'break' ? br : type === 'lunch' ? lu : lesson;
+        this.form.get('duration_minutes')?.setValue(val, { emitEvent: false });
       }
+    });
+
+    // when period type changes, update duration to school's default for the type unless user modified duration
+    this.form.get('period_type')?.valueChanges.subscribe((type: string) => {
+      if (this.userEditedDuration) return;
+      const s = this.auth.getSelectedSchool();
+      const lesson = (s as any)?.lesson_duration_minutes ?? 40;
+      const br = (s as any)?.break_duration_minutes ?? 10;
+      const lu = (s as any)?.lunch_duration_minutes ?? 30;
+      const val = type === 'break' ? br : type === 'lunch' ? lu : lesson;
+      this.form.get('duration_minutes')?.setValue(val, { emitEvent: false });
+    });
+
+    // track if user edits the duration manually (programmatic sets use emitEvent:false)
+    this.form.get('duration_minutes')?.valueChanges.subscribe(() => {
+      this.userEditedDuration = true;
     });
 
     // track if user edits the start_time manually

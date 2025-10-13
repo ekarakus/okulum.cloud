@@ -32,6 +32,10 @@ import { apiBase } from '../runtime-config';
             <span class="material-symbols-outlined action-icon" aria-hidden="true">place</span>
             Nöbet Yerleri
           </button>
+          <button mat-raised-button routerLink="/duty-roster" class="action-btn duty-roster-btn">
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">table_rows</span>
+            Nöbetçi Tablosu
+          </button>
           <button mat-raised-button routerLink="/school-time-table" class="action-btn schedule-btn">
             <span class="material-symbols-outlined action-icon" aria-hidden="true">schedule</span>
             Ders Saatleri

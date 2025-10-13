@@ -25,6 +25,8 @@ const School = sequelize.define('School', {
   start_time: { type: DataTypes.STRING(5), allowNull: false, defaultValue: '08:00' },
   lesson_duration_minutes: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 40 },
   break_duration_minutes: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 10 },
+  // Öğlen ders başlama saati. Sadece ikili eğitim olan okullar için geçerli olabilir. Format: HH:mm
+  lunch_start_time: { type: DataTypes.STRING(5), allowNull: true, comment: 'Öğlen ders başlangıç saati (HH:mm) - nullable' },
   logo_path: { type: DataTypes.STRING, allowNull: true },
   created_at: { 
     type: DataTypes.DATE, 

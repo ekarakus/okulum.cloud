@@ -22,6 +22,10 @@ interface School {
   name: string;
   code: string;
   created_at: string;
+  school_type?: string;
+  is_double_shift?: boolean;
+  start_time?: string | null;
+  lunch_start_time?: string | null;
   userCount?: number;
   deviceCount?: number;
 }
@@ -153,13 +157,31 @@ interface School {
               </td>
             </ng-container>
 
-            <!-- Created Date Column -->
-            <ng-container matColumnDef="created">
-              <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('created_at')" style="cursor:pointer; padding:4px 12px">Oluşturulma
-                <mat-icon *ngIf="sort.field==='created_at'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-              </th>
+            <!-- School Type Column -->
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef style="padding:4px 12px">Okul Tipi</th>
               <td mat-cell *matCellDef="let school" style="padding:4px 12px">
-                {{ formatDate(school.created_at) }}
+                {{ school.school_type | titlecase }}
+              </td>
+            </ng-container>
+
+            <!-- Shift Column -->
+            <ng-container matColumnDef="shift">
+              <th mat-header-cell *matHeaderCellDef style="padding:4px 12px">İkili Eğitim</th>
+              <td mat-cell *matCellDef="let school" style="padding:4px 12px">
+                <span *ngIf="school.is_double_shift; else single">Evet</span>
+                <ng-template #single>Hayır</ng-template>
+              </td>
+            </ng-container>
+
+            <!-- Times Column -->
+            <ng-container matColumnDef="times">
+              <th mat-header-cell *matHeaderCellDef style="padding:4px 12px">Ders Saatleri</th>
+              <td mat-cell *matCellDef="let school" style="padding:4px 12px">
+                <div class="times">
+                  <div>Sabah: {{ school.start_time || '—' }}</div>
+                  <div *ngIf="school.is_double_shift">Öğlen: {{ school.lunch_start_time || '—' }}</div>
+                </div>
               </td>
             </ng-container>
 
@@ -591,7 +613,7 @@ export class SchoolListComponent implements OnInit, OnDestroy {
   schools: School[] = [];
   // Sorting
   sort: { field: string | null, dir: 'asc' | 'desc' } = { field: null, dir: 'asc' };
-  displayedColumns: string[] = ['name', 'stats', 'created', 'actions'];
+  displayedColumns: string[] = ['name', 'type', 'shift', 'times', 'stats', 'actions'];
   isLoading = false;
   private subscription: Subscription = new Subscription();
 
@@ -712,6 +734,7 @@ export class SchoolListComponent implements OnInit, OnDestroy {
           school_type: (school as any).school_type ?? 'ilk_okul',
           is_double_shift: (school as any).is_double_shift ?? false,
           start_time: (school as any).start_time ?? '08:00',
+              lunch_start_time: (school as any).lunch_start_time ?? null,
           lesson_duration_minutes: (school as any).lesson_duration_minutes ?? 40,
           break_duration_minutes: (school as any).break_duration_minutes ?? 10,
           logo_path: (school as any).logo_path ?? null
@@ -786,6 +809,8 @@ export class SchoolListComponent implements OnInit, OnDestroy {
       school_type: schoolData.school_type ?? 'ilk_okul',
       is_double_shift: !!schoolData.is_double_shift,
       start_time: schoolData.start_time ?? '08:00',
+      // only send lunch_start_time when the school is double-shift; otherwise ensure null
+      lunch_start_time: !!schoolData.is_double_shift ? (schoolData.lunch_start_time ?? null) : null,
       lesson_duration_minutes: typeof schoolData.lesson_duration_minutes !== 'undefined' ? Number(schoolData.lesson_duration_minutes) : 40,
       break_duration_minutes: typeof schoolData.break_duration_minutes !== 'undefined' ? Number(schoolData.break_duration_minutes) : 10,
       logo_path: schoolData.logo_path ?? null

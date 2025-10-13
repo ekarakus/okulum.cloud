@@ -78,15 +78,22 @@ exports.getSchoolById = async (req, res) => {
 // Yeni okul oluştur (sadece super_admin)
 exports.createSchool = async (req, res) => {
   try {
-    const { name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path } = req.body;
+    const { name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path, lunch_start_time } = req.body;
     console.log('[createSchool] payload:', {
-      name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path
+      name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path, lunch_start_time
     });
 
     // Basic validation
     if (!name || !code) return res.status(400).json({ message: 'name and code are required' });
     if (!province_id || !district_id) return res.status(400).json({ message: 'province_id and district_id are required' });
     if (!school_type) return res.status(400).json({ message: 'school_type is required' });
+
+    // Validate lunch_start_time format when provided
+    if (typeof lunch_start_time !== 'undefined' && lunch_start_time !== null) {
+      if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(lunch_start_time)) {
+        return res.status(400).json({ message: 'lunch_start_time must be in HH:mm format' });
+      }
+    }
 
     const existingSchool = await School.findOne({ where: { code } });
     if (existingSchool) return res.status(400).json({ message: 'Bu okul kodu zaten kullanımda' });
@@ -101,6 +108,8 @@ exports.createSchool = async (req, res) => {
       start_time: start_time || '08:00',
       lesson_duration_minutes: parseInt(lesson_duration_minutes || 40,10),
       break_duration_minutes: parseInt(break_duration_minutes || 10,10),
+      // Only store lunch_start_time when the school is double shift; otherwise null
+      lunch_start_time: !!is_double_shift ? (lunch_start_time || null) : null,
       logo_path: logo_path || null
     });
 
@@ -115,9 +124,9 @@ exports.createSchool = async (req, res) => {
 exports.updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path } = req.body;
+    const { name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path, lunch_start_time } = req.body;
     console.log('[updateSchool] id=', id, 'payload=', {
-      name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path
+      name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path, lunch_start_time
     });
 
     const school = await School.findByPk(id);
@@ -128,16 +137,27 @@ exports.updateSchool = async (req, res) => {
       if (existingSchool) return res.status(400).json({ message: 'Bu okul kodu zaten kullanımda' });
     }
 
+    const newIsDouble = (typeof is_double_shift !== 'undefined') ? !!is_double_shift : school.is_double_shift;
+
+    // Validate lunch_start_time format when provided
+    if (typeof lunch_start_time !== 'undefined' && lunch_start_time !== null) {
+      if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(lunch_start_time)) {
+        return res.status(400).json({ message: 'lunch_start_time must be in HH:mm format' });
+      }
+    }
+
     await school.update({
       name: name ?? school.name,
       code: code ?? school.code,
       province_id: province_id ?? school.province_id,
       district_id: district_id ?? school.district_id,
       school_type: school_type ?? school.school_type,
-      is_double_shift: (typeof is_double_shift !== 'undefined') ? !!is_double_shift : school.is_double_shift,
+      is_double_shift: newIsDouble,
       start_time: start_time ?? school.start_time,
       lesson_duration_minutes: typeof lesson_duration_minutes !== 'undefined' ? parseInt(lesson_duration_minutes,10) : school.lesson_duration_minutes,
       break_duration_minutes: typeof break_duration_minutes !== 'undefined' ? parseInt(break_duration_minutes,10) : school.break_duration_minutes,
+      // If the school is not double-shift, ensure lunch_start_time is null in DB
+      lunch_start_time: newIsDouble ? (typeof lunch_start_time !== 'undefined' ? lunch_start_time : school.lunch_start_time) : null,
       logo_path: typeof logo_path !== 'undefined' ? logo_path : school.logo_path
     });
 

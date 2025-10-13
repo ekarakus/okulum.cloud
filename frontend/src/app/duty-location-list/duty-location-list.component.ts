@@ -30,10 +30,16 @@ import { AuthService } from '../services/auth.service';
             Nöbet Yerleri
           </h1>
         </div>
-        <button mat-raised-button color="primary" (click)="openAddDialog()" class="add-btn" [disabled]="!selectedSchool">
-          <mat-icon fontSet="material-symbols-outlined">add_location</mat-icon>
-          Yeni Nöbet Yeri Ekle
-        </button>
+        <div style="display:flex; gap:8px; align-items:center">
+          <button mat-raised-button color="primary" (click)="openAddDialog()" class="add-btn" [disabled]="!selectedSchool">
+            <mat-icon fontSet="material-symbols-outlined">add_location</mat-icon>
+            Yeni Nöbet Yeri Ekle
+          </button>
+          <button mat-stroked-button color="primary" (click)="openRoster()" [disabled]="!selectedSchool">
+            <mat-icon fontSet="material-symbols-outlined">table_chart</mat-icon>
+            Nöbetçi Tablosu
+          </button>
+        </div>
       </div>
 
       <mat-card class="table-card">
@@ -185,5 +191,10 @@ export class DutyLocationListComponent implements OnInit, AfterViewInit {
     if (!confirm(`"${item.name}" adlı nöbet yerini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) return;
     const token = this.getToken(); if (!token) return; const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     this.http.delete(`${apiBase}/api/duty_locations/${item.id}`, { headers }).subscribe({ next: () => this.refresh(), error: err => console.error('Error deleting duty location:', err) });
+  }
+
+  openRoster() {
+    if (!this.selectedSchool) return;
+    this.router.navigate(['/duty-roster']);
   }
 }
