@@ -20,9 +20,28 @@ import { apiBase } from '../runtime-config';
   host: { 'ngSkipHydration': '' },
   template: `
     <div class="dashboard-container">
-      <!-- Hızlı Erişim (üstte taşındı) -->
+      <!-- Okul işlemleri (yeni bölüm) -->
+      <div class="school-ops-section" style="margin-top:0;">
+        <h2 class="section-title">🏫 Okul işlemleri</h2>
+        <div class="actions-grid">
+          <button mat-raised-button routerLink="/school-employees" class="action-btn people-btn">
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">people</span>
+            Personel Yönetimi
+          </button>
+          <button mat-raised-button routerLink="/duty-locations" class="action-btn duty-btn">
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">place</span>
+            Nöbet Yerleri
+          </button>
+          <button mat-raised-button routerLink="/school-time-table" class="action-btn schedule-btn">
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">schedule</span>
+            Ders Saatleri
+          </button>
+        </div>
+      </div>
+
+      <!-- Demirbaş (önceden Hızlı Erişim) -->
       <div class="quick-actions-section" style="margin-top:0;">
-        <h2 class="section-title">🚀 Hızlı Erişim</h2>
+        <h2 class="section-title">🚀 Demirbaş</h2>
         <div class="actions-grid">
           <button mat-raised-button color="primary" routerLink="/devices" class="action-btn primary-btn">
             <span class="material-symbols-outlined action-icon" aria-hidden="true">computer</span>
@@ -35,10 +54,6 @@ import { apiBase } from '../runtime-config';
           <button mat-raised-button routerLink="/technicians" class="action-btn info-btn">
             <span class="material-symbols-outlined action-icon" aria-hidden="true">engineering</span>
             Teknisyenler
-          </button>
-          <button mat-raised-button routerLink="/school-employees" class="action-btn people-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">people</span>
-            Personel Yönetimi
           </button>
           <button mat-raised-button routerLink="/locations" class="action-btn success-btn">
               <span class="material-symbols-outlined action-icon" aria-hidden="true">location_on</span>

@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule } from '@angular/material/dialog';
@@ -15,6 +16,8 @@ import { MatSortModule, MatSort } from '@angular/material/sort';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ViewChild, AfterViewInit } from '@angular/core';
 import { SubscriptionLike } from 'rxjs';
 import { AuthService } from '../services/auth.service';
@@ -45,7 +48,7 @@ const _styles = `
 @Component({
   selector: 'app-school-employees',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSortModule, MatTooltipModule],
+  imports: [CommonModule, MatCardModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSortModule, MatTooltipModule, MatCheckboxModule],
   styles: [_styles],
   template: `
     <div class="container">
@@ -73,6 +76,10 @@ const _styles = `
                 <mat-icon fontSet="material-symbols-outlined">person_add</mat-icon>
                 Yeni Personel
               </button>
+              <button mat-raised-button color="warn" (click)="bulkRemove()" [disabled]="selectedIds.size === 0" style="margin-left:8px;">
+                <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+                Seçilenleri Sil ({{selectedIds.size}})
+              </button>
             </div>
         </div>
 
@@ -91,6 +98,14 @@ const _styles = `
             </div>
 
           <table mat-table [dataSource]="dataSource" class="employees-table" matSort *ngIf="(dataSource.data?.length || 0) > 0; else emptyState">
+            <ng-container matColumnDef="select">
+              <th mat-header-cell *matHeaderCellDef style="padding:4px 12px; width:40px; text-align:center;">
+                <mat-checkbox [checked]="isAllSelected()" (change)="toggleSelectAll($event)"></mat-checkbox>
+              </th>
+              <td mat-cell *matCellDef="let e" style="padding:4px 12px; text-align:center;">
+                <mat-checkbox [checked]="selectedIds.has(e.id)" (change)="toggleSelect(e)"></mat-checkbox>
+              </td>
+            </ng-container>
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 4px 12px; text-align: left;">Ad Soyad</th>
               <td mat-cell *matCellDef="let e" style="padding: 4px 12px;">{{ e.name }}</td>
@@ -118,10 +133,6 @@ const _styles = `
                   <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
                   Düzenle
                 </button>
-                <button mat-button color="warn" (click)="remove(e)">
-                  <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
-                  Sil
-                </button>
               </td>
             </ng-container>
 
@@ -146,8 +157,10 @@ const _styles = `
 export class SchoolEmployeesComponent implements OnInit, OnDestroy {
   employees: any[] = [];
   types: any[] = [];
-  displayedColumns = ['name','type','branch','email','actions'];
+  displayedColumns = ['select','name','type','branch','email','actions'];
   dataSource: MatTableDataSource<any> = new MatTableDataSource<any>([]);
+  // selection state for bulk delete
+  selectedIds: Set<number> = new Set<number>();
   private sub?: Subscription;
   private sortSub?: Subscription;
   // internal MatSort holder used by ViewChild setter
@@ -316,6 +329,37 @@ export class SchoolEmployeesComponent implements OnInit, OnDestroy {
   remove(emp: any) {
     if (!confirm('Silmek istediğinize emin misiniz?')) return;
     this.empSvc.remove(emp.id).subscribe({ next: () => { const school = this.auth.getSelectedSchool(); if (school) this.load(school.id); }, error: () => alert('Silme başarısız') });
+  }
+
+  toggleSelect(emp: any) {
+    if (this.selectedIds.has(emp.id)) this.selectedIds.delete(emp.id);
+    else this.selectedIds.add(emp.id);
+  }
+
+  toggleSelectAll(event: any) {
+    const checked = !!event.checked;
+    if (checked) {
+      this.dataSource.data.forEach((d: any) => this.selectedIds.add(d.id));
+    } else {
+      this.selectedIds.clear();
+    }
+  }
+
+  isAllSelected(): boolean {
+    const data = this.dataSource.data || [];
+    return data.length > 0 && data.every((d: any) => this.selectedIds.has(d.id));
+  }
+
+  bulkRemove() {
+    if (this.selectedIds.size === 0) return;
+    if (!confirm(`Seçili ${this.selectedIds.size} personeli silmek istediğinize emin misiniz?`)) return;
+    const headers = { Authorization: `Bearer ${this.getToken()}` } as any;
+    const calls = Array.from(this.selectedIds).map(id => this.empSvc.remove(id).pipe(catchError(err => { console.error('bulk delete failed for', id, err); return of({ error: true, id }); })));
+    forkJoin(calls).subscribe({ next: (results: any) => {
+      // reload list and clear selection
+      const school = this.auth.getSelectedSchool(); if (school) this.load(school.id);
+      this.selectedIds.clear();
+    }, error: (err) => { console.error('bulk remove error', err); alert('Çoklu silme sırasında hata oluştu'); } });
   }
 
   openTypes() {

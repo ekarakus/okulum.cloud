@@ -78,19 +78,32 @@ exports.getSchoolById = async (req, res) => {
 // Yeni okul oluştur (sadece super_admin)
 exports.createSchool = async (req, res) => {
   try {
-    const { name, code } = req.body;
-    
-    // Okul kodu benzersiz mi kontrol et
+    const { name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path } = req.body;
+    console.log('[createSchool] payload:', {
+      name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path
+    });
+
+    // Basic validation
+    if (!name || !code) return res.status(400).json({ message: 'name and code are required' });
+    if (!province_id || !district_id) return res.status(400).json({ message: 'province_id and district_id are required' });
+    if (!school_type) return res.status(400).json({ message: 'school_type is required' });
+
     const existingSchool = await School.findOne({ where: { code } });
-    if (existingSchool) {
-      return res.status(400).json({ message: 'Bu okul kodu zaten kullanımda' });
-    }
-    
+    if (existingSchool) return res.status(400).json({ message: 'Bu okul kodu zaten kullanımda' });
+
     const school = await School.create({
       name,
-      code
+      code,
+      province_id,
+      district_id,
+      school_type,
+      is_double_shift: !!is_double_shift,
+      start_time: start_time || '08:00',
+      lesson_duration_minutes: parseInt(lesson_duration_minutes || 40,10),
+      break_duration_minutes: parseInt(break_duration_minutes || 10,10),
+      logo_path: logo_path || null
     });
-    
+
     res.status(201).json(school);
   } catch (err) {
     console.error('Error creating school:', err);
@@ -102,26 +115,33 @@ exports.createSchool = async (req, res) => {
 exports.updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code } = req.body;
-    
-    const school = await School.findByPk(id);
-    if (!school) {
-      return res.status(404).json({ message: 'Okul bulunamadı' });
-    }
-    
-    // Okul kodu değiştiriliyorsa benzersizlik kontrol et
-    if (code !== school.code) {
-      const existingSchool = await School.findOne({ where: { code } });
-      if (existingSchool) {
-        return res.status(400).json({ message: 'Bu okul kodu zaten kullanımda' });
-      }
-    }
-    
-    await school.update({
-      name,
-      code
+    const { name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path } = req.body;
+    console.log('[updateSchool] id=', id, 'payload=', {
+      name, code, province_id, district_id, school_type, is_double_shift, start_time, lesson_duration_minutes, break_duration_minutes, logo_path
     });
-    
+
+    const school = await School.findByPk(id);
+    if (!school) return res.status(404).json({ message: 'Okul bulunamadı' });
+
+    if (code && code !== school.code) {
+      const existingSchool = await School.findOne({ where: { code } });
+      if (existingSchool) return res.status(400).json({ message: 'Bu okul kodu zaten kullanımda' });
+    }
+
+    await school.update({
+      name: name ?? school.name,
+      code: code ?? school.code,
+      province_id: province_id ?? school.province_id,
+      district_id: district_id ?? school.district_id,
+      school_type: school_type ?? school.school_type,
+      is_double_shift: (typeof is_double_shift !== 'undefined') ? !!is_double_shift : school.is_double_shift,
+      start_time: start_time ?? school.start_time,
+      lesson_duration_minutes: typeof lesson_duration_minutes !== 'undefined' ? parseInt(lesson_duration_minutes,10) : school.lesson_duration_minutes,
+      break_duration_minutes: typeof break_duration_minutes !== 'undefined' ? parseInt(break_duration_minutes,10) : school.break_duration_minutes,
+      logo_path: typeof logo_path !== 'undefined' ? logo_path : school.logo_path
+    });
+
+    console.log('[updateSchool] updated:', school.toJSON());
     res.json(school);
   } catch (err) {
     console.error('Error updating school:', err);

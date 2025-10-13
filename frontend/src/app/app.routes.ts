@@ -96,6 +96,11 @@ export const routes: Routes = [
         data: { requiresSchool: true }
       },
       {
+        path: 'duty-locations',
+        loadComponent: () => import('./duty-location-list/duty-location-list.component').then(m => m.DutyLocationListComponent),
+        data: { requiresSchool: true }
+      },
+      {
         path: 'technicians',
         loadComponent: () => import('./technician-list/technician-list.component').then(m => m.TechnicianListComponent),
         data: { requiresSchool: true }
@@ -103,6 +108,11 @@ export const routes: Routes = [
       {
         path: 'school-employees',
         loadComponent: () => import('./school-employees/school-employees.component').then(m => m.SchoolEmployeesComponent),
+        data: { requiresSchool: true }
+      },
+      {
+        path: 'school-time-table',
+        loadComponent: () => import('./school-time-table/school-time-table-list.component').then(m => m.SchoolTimeTableListComponent),
         data: { requiresSchool: true }
       },
       {

@@ -60,10 +60,16 @@ export class SchoolEmployeeDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.form = this.fb.group({ name: ['', Validators.required], email: [''], branch: [''], employee_type_id: [null] });
-    this.typeSvc.list().subscribe({ next: (res) => this.types = res || [] });
-    if (this.data.mode === 'edit' && this.data.employee) {
-      this.form.patchValue(this.data.employee);
-    }
+    // Load employee types first, then patch form so the select can resolve the selected value
+    this.typeSvc.list().subscribe({ next: (res) => {
+      this.types = res || [];
+      if (this.data.mode === 'edit' && this.data.employee) {
+        const emp = this.data.employee as any;
+        // prefer explicit employee_type_id, fall back to nested EmployeeType id when available
+        const employee_type_id = emp.employee_type_id ?? emp.EmployeeType?.id ?? null;
+        this.form.patchValue({ ...emp, employee_type_id });
+      }
+    }});
   }
 
   onCancel() { this.dialogRef.close(null); }

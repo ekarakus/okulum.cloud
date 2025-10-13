@@ -706,7 +706,15 @@ export class SchoolListComponent implements OnInit, OnDestroy {
         school: {
           id: school.id,
           name: school.name,
-          code: school.code
+          code: school.code,
+          province_id: (school as any).province_id ?? null,
+          district_id: (school as any).district_id ?? null,
+          school_type: (school as any).school_type ?? 'ilk_okul',
+          is_double_shift: (school as any).is_double_shift ?? false,
+          start_time: (school as any).start_time ?? '08:00',
+          lesson_duration_minutes: (school as any).lesson_duration_minutes ?? 40,
+          break_duration_minutes: (school as any).break_duration_minutes ?? 10,
+          logo_path: (school as any).logo_path ?? null
         }
       } as SchoolDialogData
     });
@@ -769,18 +777,26 @@ export class SchoolListComponent implements OnInit, OnDestroy {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
     let request$;
+    // Build payload including new fields
+    const payload: any = {
+      name: schoolData.name,
+      code: schoolData.code,
+      province_id: schoolData.province_id ?? null,
+      district_id: schoolData.district_id ?? null,
+      school_type: schoolData.school_type ?? 'ilk_okul',
+      is_double_shift: !!schoolData.is_double_shift,
+      start_time: schoolData.start_time ?? '08:00',
+      lesson_duration_minutes: typeof schoolData.lesson_duration_minutes !== 'undefined' ? Number(schoolData.lesson_duration_minutes) : 40,
+      break_duration_minutes: typeof schoolData.break_duration_minutes !== 'undefined' ? Number(schoolData.break_duration_minutes) : 10,
+      logo_path: schoolData.logo_path ?? null
+    };
+
     if (schoolData.id) {
       // Güncelleme
-  request$ = this.http.put(`${apiBase}/api/schools/${schoolData.id}`, {
-        name: schoolData.name,
-        code: schoolData.code
-      }, { headers });
+      request$ = this.http.put(`${apiBase}/api/schools/${schoolData.id}`, payload, { headers });
     } else {
       // Yeni ekleme
-  request$ = this.http.post(`${apiBase}/api/schools`, {
-        name: schoolData.name,
-        code: schoolData.code
-      }, { headers });
+      request$ = this.http.post(`${apiBase}/api/schools`, payload, { headers });
     }
 
     request$.subscribe({

@@ -1,5 +1,6 @@
 const { sequelize, createDatabase } = require('./index');
 const Location = require('./location');
+const DutyLocation = require('./dutyLocation');
 const Device = require('./Device');
 const DeviceType = require('./deviceType');
 const OperationType = require('./operationType');
@@ -14,6 +15,8 @@ const UserPermission = require('./userPermission');
 const Permission = require('./permission');
 const EmployeeType = require('./employeeType');
 const SchoolEmployee = require('./schoolEmployee');
+const Province = require('./province');
+const District = require('./district');
 
 // İlişkiler
 Location.hasMany(Device, { foreignKey: 'location_id', as: 'Location' });
@@ -59,6 +62,10 @@ Device.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 School.hasMany(Location, { foreignKey: 'school_id', as: 'Locations' });
 Location.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 
+// DutyLocation relations
+School.hasMany(DutyLocation, { foreignKey: 'school_id', as: 'DutyLocations' });
+DutyLocation.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
+
 School.hasMany(Technician, { foreignKey: 'school_id', as: 'Technicians' });
 Technician.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 
@@ -89,6 +96,16 @@ School.hasMany(UserSchool, { foreignKey: 'school_id', as: 'UserSchools' });
 School.hasMany(SchoolEmployee, { foreignKey: 'school_id', as: 'Employees' });
 SchoolEmployee.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 
+// Province/District relations
+Province.hasMany(District, { foreignKey: 'province_id', as: 'Districts' });
+District.belongsTo(Province, { foreignKey: 'province_id', as: 'Province' });
+
+// School location relations
+Province.hasMany(School, { foreignKey: 'province_id', as: 'Schools' });
+District.hasMany(School, { foreignKey: 'district_id', as: 'Schools' });
+School.belongsTo(Province, { foreignKey: 'province_id', as: 'Province' });
+School.belongsTo(District, { foreignKey: 'district_id', as: 'District' });
+
 // EmployeeType relations
 EmployeeType.hasMany(SchoolEmployee, { foreignKey: 'employee_type_id', as: 'Employees' });
 SchoolEmployee.belongsTo(EmployeeType, { foreignKey: 'employee_type_id', as: 'EmployeeType' });
@@ -111,4 +128,7 @@ module.exports = {
   Permission,
   EmployeeType,
   SchoolEmployee,
+  DutyLocation,
+  Province,
+  District,
 };

@@ -1,17 +1,30 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { HttpClientModule } from '@angular/common/http';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { apiBase } from '../runtime-config';
 
 export interface SchoolDialogData {
   school?: {
     id?: number;
     name: string;
     code: string;
+    province_id?: number | null;
+    district_id?: number | null;
+    school_type?: string | null;
+    is_double_shift?: boolean | null;
+    start_time?: string | null;
+    lesson_duration_minutes?: number | null;
+    break_duration_minutes?: number | null;
+    logo_path?: string | null;
   };
   mode: 'add' | 'edit';
 }
@@ -26,6 +39,9 @@ export interface SchoolDialogData {
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    MatSelectModule,
+    MatCheckboxModule,
+    HttpClientModule,
     ReactiveFormsModule
   ],
   template: `
@@ -76,6 +92,64 @@ export interface SchoolDialogData {
               Okul kodu sadece harf ve rakam içerebilir
             </mat-error>
           </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>İl</mat-label>
+            <mat-select formControlName="province_id" (selectionChange)="onProvinceChange($event.value)">
+              <mat-option *ngFor="let p of provinces" [value]="p.id">{{ p.name }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="schoolForm.get('province_id')?.hasError('required')">İl zorunludur</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>İlçe</mat-label>
+            <mat-select formControlName="district_id">
+              <mat-option *ngFor="let d of districts" [value]="d.id">{{ d.name }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="schoolForm.get('district_id')?.hasError('required')">İlçe zorunludur</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Okul Tipi</mat-label>
+            <mat-select formControlName="school_type">
+              <mat-option value="ana_okulu">Ana Okulu</mat-option>
+              <mat-option value="ilk_okul">İlkokul</mat-option>
+              <mat-option value="orta_okul">Ortaokul</mat-option>
+              <mat-option value="lise">Lise</mat-option>
+            </mat-select>
+            <mat-error *ngIf="schoolForm.get('school_type')?.hasError('required')">Okul tipi zorunludur</mat-error>
+          </mat-form-field>
+
+          <div class="form-field">
+            <label style="display:block;margin-bottom:4px">İkili Eğitim</label>
+            <mat-checkbox formControlName="is_double_shift">İkili eğitim mi?</mat-checkbox>
+          </div>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Sabah İlk Ders Başlama Saati</mat-label>
+            <mat-select formControlName="start_time">
+              <mat-option *ngFor="let t of times" [value]="t">{{ t }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="schoolForm.get('start_time')?.hasError('required')">Başlangıç saati zorunludur</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Ders Süresi (dakika)</mat-label>
+            <input matInput type="number" formControlName="lesson_duration_minutes" min="1">
+            <mat-error *ngIf="schoolForm.get('lesson_duration_minutes')?.hasError('required')">Ders süresi zorunludur</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Mola Süresi (dakika)</mat-label>
+            <input matInput type="number" formControlName="break_duration_minutes" min="0">
+            <mat-error *ngIf="schoolForm.get('break_duration_minutes')?.hasError('required')">Mola süresi zorunludur</mat-error>
+          </mat-form-field>
+
+          <div class="form-field">
+            <label for="logo">Okul Logosu</label>
+            <input id="logo" type="file" (change)="onFileSelected($event)" accept="image/*">
+            <div *ngIf="uploadedFileName">Yüklendi: {{ uploadedFileName }}</div>
+          </div>
           <div style="display:none"><button type="submit"></button></div>
         </form>
       </div>
@@ -196,15 +270,32 @@ export interface SchoolDialogData {
 export class SchoolDialogComponent implements OnInit {
   schoolForm: FormGroup;
   isLoading = false;
+  provinces: Array<any> = [];
+  districts: Array<any> = [];
+  times: string[] = [];
+  uploadedFileName: string | null = null;
+  uploadedPath: string | null = null;
+  selectedFile: File | null = null;
+  readonly ISTANBUL_ID = 34;
 
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<SchoolDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: SchoolDialogData
+    @Inject(MAT_DIALOG_DATA) public data: SchoolDialogData,
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
   ) {
     this.schoolForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
-      code: ['', [Validators.required, Validators.minLength(3), Validators.pattern(/^[A-Z0-9]+$/)]]
+      code: ['', [Validators.required, Validators.minLength(3), Validators.pattern(/^[A-Z0-9]+$/)]],
+      province_id: [null, [Validators.required]],
+      district_id: [null, [Validators.required]],
+      school_type: ['ilk_okul', [Validators.required]],
+      is_double_shift: [false],
+      start_time: ['08:00', [Validators.required]],
+      lesson_duration_minutes: [40, [Validators.required]],
+      break_duration_minutes: [10, [Validators.required]],
+      logo_path: [null]
     });
   }
 
@@ -212,9 +303,26 @@ export class SchoolDialogComponent implements OnInit {
     if (this.data.mode === 'edit' && this.data.school) {
       this.schoolForm.patchValue({
         name: this.data.school.name,
-        code: this.data.school.code
+        code: this.data.school.code,
+        province_id: this.data.school.province_id ?? null,
+        district_id: this.data.school.district_id ?? null,
+        school_type: this.data.school.school_type ?? 'ilk_okul',
+        is_double_shift: this.data.school.is_double_shift ?? false,
+        start_time: this.data.school.start_time ?? '08:00',
+        lesson_duration_minutes: this.data.school.lesson_duration_minutes ?? 40,
+        break_duration_minutes: this.data.school.break_duration_minutes ?? 10,
+        logo_path: this.data.school.logo_path ?? null
       });
+      if (this.data.school.logo_path) {
+        const lp = this.data.school.logo_path as string;
+        this.uploadedFileName = lp.split('/').pop() || null;
+        this.uploadedPath = lp;
+      }
     }
+
+    // Load provinces and times
+    this.loadProvinces();
+    this.initTimes();
 
     // Code alanını büyük harfe çevir
     this.schoolForm.get('code')?.valueChanges.subscribe(value => {
@@ -233,14 +341,113 @@ export class SchoolDialogComponent implements OnInit {
 
       const result = {
         ...formValue,
-        id: this.data.school?.id
+        id: this.data.school?.id,
+        // logo_path will be set after upload if a new file was selected
+        logo_path: this.uploadedPath || formValue.logo_path
       };
 
-      this.dialogRef.close(result);
+      // If a file was selected, upload it first, then close with returned path
+      if (this.selectedFile) {
+        const fd = new FormData();
+        fd.append('file', this.selectedFile);
+        this.isLoading = true;
+        this.http.post<any>(`${apiBase}/api/school-logo`, fd).subscribe(resp => {
+          this.isLoading = false;
+          if (resp && resp.path) {
+            result.logo_path = resp.path;
+          }
+          this.dialogRef.close(result);
+        }, err => {
+          this.isLoading = false;
+          console.error('Upload failed during save', err);
+          alert('Logo yüklenemedi. Lütfen tekrar deneyin.');
+        });
+      } else {
+        this.dialogRef.close(result);
+      }
     } else {
       // Form'daki tüm alanları touch yap ki hatalar görünsün
       this.schoolForm.markAllAsTouched();
     }
+  }
+
+  private loadProvinces() {
+    this.http.get<any[]>(`${apiBase}/api/provinces`).subscribe(list => {
+      this.provinces = list || [];
+      // Defer mutations to next microtask to avoid ExpressionChangedAfterItHasBeenCheckedError
+      Promise.resolve().then(() => {
+        // Default Istanbul in add mode
+        if (this.data.mode === 'add') {
+          const ist = this.provinces.find(p => p.id === this.ISTANBUL_ID);
+          if (ist) {
+            this.schoolForm.patchValue({ province_id: ist.id });
+            this.onProvinceChange(ist.id);
+          } else if (this.provinces.length) {
+            this.schoolForm.patchValue({ province_id: this.provinces[0].id });
+            this.onProvinceChange(this.provinces[0].id);
+          }
+        } else if (this.data.mode === 'edit') {
+          const pid = this.schoolForm.get('province_id')?.value;
+          if (pid) this.onProvinceChange(pid);
+        }
+        // Ensure view updates do not trigger ExpressionChangedAfterItHasBeenCheckedError
+        try { this.cdr.detectChanges(); } catch (e) { /* ignore in non-AOT/dev modes */ }
+      });
+    }, err => {
+      console.error('Failed to load provinces', err);
+    });
+  }
+
+  onProvinceChange(provinceId: number) {
+    if (!provinceId) {
+      this.districts = [];
+      this.schoolForm.patchValue({ district_id: null });
+      return;
+    }
+    this.http.get<any[]>(`${apiBase}/api/provinces/${provinceId}/districts`).subscribe(list => {
+      this.districts = list || [];
+      // Auto-select first district when province changes if current district is not present
+      const currentDistrict = this.schoolForm.get('district_id')?.value;
+      const districtIds = this.districts.map(d => d.id);
+      if (this.districts.length) {
+        if (currentDistrict == null || !districtIds.includes(currentDistrict)) {
+          this.schoolForm.patchValue({ district_id: this.districts[0].id });
+        }
+      } else {
+        this.schoolForm.patchValue({ district_id: null });
+      }
+      // Fix change detection timing after async update - defer to microtask
+      Promise.resolve().then(() => {
+        try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
+      });
+    }, err => {
+      console.error('Failed to load districts', err);
+      this.districts = [];
+      this.schoolForm.patchValue({ district_id: null });
+    });
+  }
+
+  initTimes() {
+    // build times from 07:00 to 10:00 every 15 minutes
+    const times: string[] = [];
+    const start = 7 * 60; const end = 10 * 60;
+    for (let m = start; m <= end; m += 15) {
+      const hh = Math.floor(m/60).toString().padStart(2,'0');
+      const mm = (m%60).toString().padStart(2,'0');
+      times.push(`${hh}:${mm}`);
+    }
+    this.times = times;
+  }
+
+  onFileSelected(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    // Store selected file but DO NOT upload now. Upload will occur on Save.
+    this.selectedFile = file;
+    this.uploadedFileName = file.name;
+    // clear any previous uploadedPath until save
+    this.uploadedPath = null;
   }
 
   onFormEnter(event: Event) {

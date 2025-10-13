@@ -30,6 +30,11 @@ app.use('/api/auth', authRouter);
 // School route
 const schoolRouter = require('./routes/schoolRoutes');
 app.use('/api/schools', schoolRouter);
+// Location dropdowns (provinces/districts) and uploads
+const locationRoutes = require('./routes/locationRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+app.use('/api', locationRoutes);
+app.use('/api', uploadRoutes);
 
 // User route
 const userRouter = require('./routes/userRoutes');
@@ -39,6 +44,10 @@ app.use('/api/users', userRouter);
 // Location route
 const locationRouter = require('./routes/location');
 app.use('/api/locations', locationRouter);
+
+// Duty locations route (Nöbet Yerleri)
+const dutyLocationsRouter = require('./routes/dutyLocations');
+app.use('/api/duty_locations', dutyLocationsRouter);
 
 
 // Device route
@@ -88,6 +97,10 @@ app.use('/api/school-employees', schoolEmployeeRouter);
 // School employees bulk upload
 const schoolEmployeeUploadRouter = require('./routes/schoolEmployeeUploadRoutes');
 app.use('/api/school-employees/upload', schoolEmployeeUploadRouter);
+
+// School time table (Ders Saatleri)
+const schoolTimeTableRouter = require('./routes/schoolTimeTableRoutes');
+app.use('/api/school-time-table', schoolTimeTableRouter);
 
 // Report routes
 const reportRouter = require('./routes/report');
