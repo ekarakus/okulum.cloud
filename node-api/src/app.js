@@ -106,6 +106,10 @@ app.use('/api/school-time-table', schoolTimeTableRouter);
 const dutyScheduleRouter = require('./routes/dutyScheduleRoutes');
 app.use('/api/duty-schedule', dutyScheduleRouter);
 
+// Announcements
+const announcementRouter = require('./routes/announcementRoutes');
+app.use('/api/announcements', announcementRouter);
+
 // Report routes
 const reportRouter = require('./routes/report');
 app.use('/api/reports', reportRouter);

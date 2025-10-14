@@ -19,6 +19,7 @@ const Province = require('./province');
 const District = require('./district');
 const DutySchedule = require('./dutySchedule');
 const DutyScheduleAssignment = require('./dutyScheduleAssignment');
+const Announcement = require('./announcement');
 
 // İlişkiler
 Location.hasMany(Device, { foreignKey: 'location_id', as: 'Location' });
@@ -116,6 +117,10 @@ SchoolEmployee.belongsTo(EmployeeType, { foreignKey: 'employee_type_id', as: 'Em
 School.hasMany(DutySchedule, { foreignKey: 'school_id', as: 'DutySchedules' });
 DutySchedule.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 
+// Announcements
+School.hasMany(Announcement, { foreignKey: 'school_id', as: 'Announcements' });
+Announcement.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
+
 DutySchedule.hasMany(DutyScheduleAssignment, { foreignKey: 'duty_schedule_id', as: 'Assignments' });
 DutyScheduleAssignment.belongsTo(DutySchedule, { foreignKey: 'duty_schedule_id', as: 'DutySchedule' });
 
@@ -148,4 +153,5 @@ module.exports = {
   District,
   DutySchedule,
   DutyScheduleAssignment,
+  Announcement,
 };

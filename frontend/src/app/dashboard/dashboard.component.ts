@@ -40,6 +40,10 @@ import { apiBase } from '../runtime-config';
             <span class="material-symbols-outlined action-icon" aria-hidden="true">schedule</span>
             Ders Saatleri
           </button>
+          <button mat-raised-button routerLink="/announcements" class="action-btn announcements-btn">
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">campaign</span>
+            Duyurular
+          </button>
         </div>
       </div>
 
