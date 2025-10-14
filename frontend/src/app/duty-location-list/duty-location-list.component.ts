@@ -195,6 +195,6 @@ export class DutyLocationListComponent implements OnInit, AfterViewInit {
 
   openRoster() {
     if (!this.selectedSchool) return;
-    this.router.navigate(['/duty-roster']);
+  this.router.navigate(['/duty-schedule']);
   }
 }

@@ -17,6 +17,8 @@ const EmployeeType = require('./employeeType');
 const SchoolEmployee = require('./schoolEmployee');
 const Province = require('./province');
 const District = require('./district');
+const DutySchedule = require('./dutySchedule');
+const DutyScheduleAssignment = require('./dutyScheduleAssignment');
 
 // İlişkiler
 Location.hasMany(Device, { foreignKey: 'location_id', as: 'Location' });
@@ -110,6 +112,19 @@ School.belongsTo(District, { foreignKey: 'district_id', as: 'District' });
 EmployeeType.hasMany(SchoolEmployee, { foreignKey: 'employee_type_id', as: 'Employees' });
 SchoolEmployee.belongsTo(EmployeeType, { foreignKey: 'employee_type_id', as: 'EmployeeType' });
 
+// Duty Schedule relations
+School.hasMany(DutySchedule, { foreignKey: 'school_id', as: 'DutySchedules' });
+DutySchedule.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
+
+DutySchedule.hasMany(DutyScheduleAssignment, { foreignKey: 'duty_schedule_id', as: 'Assignments' });
+DutyScheduleAssignment.belongsTo(DutySchedule, { foreignKey: 'duty_schedule_id', as: 'DutySchedule' });
+
+DutyScheduleAssignment.belongsTo(DutyLocation, { foreignKey: 'duty_location_id', as: 'DutyLocation' });
+DutyLocation.hasMany(DutyScheduleAssignment, { foreignKey: 'duty_location_id', as: 'ScheduleAssignments' });
+
+DutyScheduleAssignment.belongsTo(SchoolEmployee, { foreignKey: 'school_employee_id', as: 'Employee' });
+SchoolEmployee.hasMany(DutyScheduleAssignment, { foreignKey: 'school_employee_id', as: 'DutyAssignments' });
+
 module.exports = {
   sequelize,
   createDatabase,
@@ -131,4 +146,6 @@ module.exports = {
   DutyLocation,
   Province,
   District,
+  DutySchedule,
+  DutyScheduleAssignment,
 };

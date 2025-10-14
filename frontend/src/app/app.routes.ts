@@ -101,8 +101,8 @@ export const routes: Routes = [
         data: { requiresSchool: true }
       },
       {
-        path: 'duty-roster',
-        loadComponent: () => import('./duty-roster/duty-roster.component').then(m => m.DutyRosterComponent),
+        path: 'duty-schedule',
+        loadComponent: () => import('./duty-schedule/duty-schedule.component').then(m => m.DutyScheduleComponent),
         data: { requiresSchool: true }
       },
       {

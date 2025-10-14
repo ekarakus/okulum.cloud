@@ -102,6 +102,10 @@ app.use('/api/school-employees/upload', schoolEmployeeUploadRouter);
 const schoolTimeTableRouter = require('./routes/schoolTimeTableRoutes');
 app.use('/api/school-time-table', schoolTimeTableRouter);
 
+// Duty schedule (Nöbetçi Tablosu)
+const dutyScheduleRouter = require('./routes/dutyScheduleRoutes');
+app.use('/api/duty-schedule', dutyScheduleRouter);
+
 // Report routes
 const reportRouter = require('./routes/report');
 app.use('/api/reports', reportRouter);

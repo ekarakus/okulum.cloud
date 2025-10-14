@@ -32,7 +32,7 @@ import { apiBase } from '../runtime-config';
             <span class="material-symbols-outlined action-icon" aria-hidden="true">place</span>
             Nöbet Yerleri
           </button>
-          <button mat-raised-button routerLink="/duty-roster" class="action-btn duty-roster-btn">
+          <button mat-raised-button routerLink="/duty-schedule" class="action-btn duty-roster-btn">
             <span class="material-symbols-outlined action-icon" aria-hidden="true">table_rows</span>
             Nöbetçi Tablosu
           </button>
