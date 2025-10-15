@@ -126,6 +126,11 @@ export const routes: Routes = [
         data: { requiresSchool: true }
       },
       {
+        path: 'students',
+        loadComponent: () => import('./student-list/student-list.component').then(m => m.StudentListComponent),
+        data: { requiresSchool: true }
+      },
+      {
         path: 'operations',
         loadComponent: () => import('./operation-list/operation-list.component').then(m => m.OperationListComponent),
         data: { requiresSchool: true, prerender: false }

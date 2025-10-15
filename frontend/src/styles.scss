@@ -109,3 +109,43 @@ table, .mat-table {
 .filter-card, .table-header {
   padding: 12px !important;
 }
+
+/* Fix datepicker day cell sizing: user-requested override */
+.mat-calendar-body-cell-container {
+  /* Keep the requested vertical padding (percentage of container),
+     but make the horizontal padding scale with viewport using clamp():
+     - minimum 8px, preferred 2.5vw, maximum 25px */
+  padding: 7.14286% clamp(8px, 2.5vw, 25px) !important;
+}
+
+/* Fallback for older browsers that don't support clamp(): provide media-query overrides */
+@media (max-width: 480px) {
+  .mat-calendar-body-cell-container {
+    padding: 7.14286% 8px !important;
+  }
+}
+@media (min-width: 1200px) {
+  .mat-calendar-body-cell-container {
+    padding: 7.14286% 25px !important;
+  }
+}
+
+/* Force native date input appearance and ensure calendar button is visible */
+input[type="date"] {
+  appearance: auto !important;
+  -webkit-appearance: textfield !important;
+  -moz-appearance: textfield !important;
+}
+
+/* WebKit calendar picker indicator (Chrome, Edge, Safari) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: inline-block !important;
+  -webkit-appearance: menulist-button !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+}
+
+/* In case matInput or other rules hide overflow, ensure the indicator shows */
+input[type="date"] .mat-form-field-infix, input[type="date"]:not([disabled]) {
+  overflow: visible !important;
+}

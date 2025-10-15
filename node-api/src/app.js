@@ -110,6 +110,10 @@ app.use('/api/duty-schedule', dutyScheduleRouter);
 const announcementRouter = require('./routes/announcementRoutes');
 app.use('/api/announcements', announcementRouter);
 
+// Students
+const studentRouter = require('./routes/studentRoutes');
+app.use('/api/students', studentRouter);
+
 // Report routes
 const reportRouter = require('./routes/report');
 app.use('/api/reports', reportRouter);
@@ -127,6 +131,10 @@ app.get('/', (req, res) => {
 // No public test routes in production
 
 const PORT = process.env.PORT || 3000;
+
+// Serve uploaded files (attachments, logos, etc.) under /uploads
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 (async () => {
   try {

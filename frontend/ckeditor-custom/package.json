@@ -1,0 +1,10 @@
+{
+  "name": "@ckeditor/ckeditor5-build-custom",
+  "version": "1.0.0",
+  "description": "Local custom CKEditor5 build for okulum.cloud - drop the build folder here",
+  "main": "build/ckeditor.js",
+  "license": "MIT",
+  "files": [
+    "build"
+  ]
+}

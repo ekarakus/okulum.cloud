@@ -10,7 +10,8 @@ exports.listAnnouncements = async (req, res) => {
 
     const announcements = await Announcement.findAll({
       where,
-      order: [['ord','ASC'], ['publish_date','DESC']]
+      order: [['ord','ASC'], ['publish_date','DESC']],
+      include: [ { model: require('../models/announcementAttachment'), as: 'Attachments' } ]
     });
     res.json(announcements);
   } catch (err) {
@@ -23,11 +24,37 @@ exports.listAnnouncements = async (req, res) => {
 exports.getAnnouncement = async (req, res) => {
   try {
     const { id } = req.params;
-    const a = await Announcement.findByPk(id);
+    const a = await Announcement.findByPk(id, { include: [ { model: require('../models/announcementAttachment'), as: 'Attachments' } ] });
     if (!a) return res.status(404).json({ message: 'Announcement not found' });
     res.json(a);
   } catch (err) {
     console.error('Error fetching announcement:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// POST /api/announcements/:id/attachments
+exports.uploadAttachment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const announcement = await Announcement.findByPk(id);
+    if (!announcement) return res.status(404).json({ message: 'Announcement not found' });
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    const AnnouncementAttachment = require('../models/announcementAttachment');
+    // store web-accessible relative path
+    const relPath = req.file.path ? req.file.path.split('uploads')[1] : null;
+    const webPath = relPath ? ('/uploads' + relPath) : req.file.path;
+    const a = await AnnouncementAttachment.create({
+      announcement_id: id,
+      filename: req.file.originalname,
+      path: webPath,
+      mime_type: req.file.mimetype,
+      size: req.file.size
+    });
+    res.status(201).json(a);
+  } catch (err) {
+    console.error('Error uploading attachment:', err);
     res.status(500).json({ error: err.message });
   }
 };
