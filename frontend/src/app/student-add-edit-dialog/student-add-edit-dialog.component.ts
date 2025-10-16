@@ -7,7 +7,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatRadioModule } from '@angular/material/radio';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-student-add-edit-dialog',
@@ -57,6 +58,7 @@ import { HttpClient } from '@angular/common/http';
 export class StudentAddEditDialogComponent {
   fb = inject(FormBuilder);
   http = inject(HttpClient);
+  auth = inject(AuthService);
   dialogRef: MatDialogRef<any> | null = null;
   data: any;
 
@@ -87,17 +89,35 @@ export class StudentAddEditDialogComponent {
 
   save() {
     const v = this.form.value;
-    const payload = {
+    const selectedSchool = this.auth.getSelectedSchool();
+    const payload: any = {
       student_no: v.student_no,
       first_name: v.first_name,
       last_name: v.last_name,
       gender: v.gender,
       birth_date: v.birth_date || null
     };
+    // If creating, attach current selected school's id. If editing, preserve existing school_id when present.
+    if (this.data.student && this.data.student.school_id) {
+      payload.school_id = this.data.student.school_id;
+    } else if (selectedSchool) {
+      payload.school_id = selectedSchool.id;
+    }
+    const token = this.auth.getToken();
+    const options = token ? { headers: new HttpHeaders().set('Authorization', `Bearer ${token}`) } : {};
     if (this.data.student) {
-      this.http.put('/api/students/' + this.data.student.id, payload).subscribe({ next: () => this.dialogRef?.close(true), error: e => console.error(e) });
+      this.http.put('/api/students/' + this.data.student.id, payload, options).subscribe({ next: () => this.dialogRef?.close(true), error: e => this.handleError(e) });
     } else {
-      this.http.post('/api/students', payload).subscribe({ next: () => this.dialogRef?.close(true), error: e => console.error(e) });
+      this.http.post('/api/students', payload, options).subscribe({ next: () => this.dialogRef?.close(true), error: e => this.handleError(e) });
+    }
+  }
+
+  handleError(e: any) {
+    console.error('Student save error', e);
+    if (e && e.status === 401) {
+      alert('Bu işlem için yetkiniz yok. Lütfen oturum açtığınızdan emin olun.');
+    } else {
+      alert('Öğrenci kaydedilirken bir hata oluştu. Konsolu kontrol edin.');
     }
   }
 }

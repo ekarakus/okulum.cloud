@@ -61,3 +61,18 @@ exports.remove = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+exports.bulkDelete = async (req, res) => {
+  try {
+    const ids = req.body && Array.isArray(req.body.ids) ? req.body.ids.map(id => parseInt(id, 10)).filter(Boolean) : [];
+    if (!ids.length) return res.status(400).json({ error: 'No ids provided' });
+    const { sequelize } = require('../models/relations');
+    await sequelize.transaction(async (t) => {
+      await Student.destroy({ where: { id: ids }, transaction: t });
+    });
+    res.json({ success: true, deleted: ids.length });
+  } catch (err) {
+    console.error('Student bulk delete error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
