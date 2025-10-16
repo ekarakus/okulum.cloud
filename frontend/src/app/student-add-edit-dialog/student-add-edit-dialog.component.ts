@@ -34,11 +34,10 @@ import { AuthService } from '../services/auth.service';
 
       <div style="display:flex; gap:4%; width:100%; align-items:flex-start">
         <div style="flex:1">
-          <label style="display:block;margin-bottom:6px">Cinsiyeti</label>
-          <mat-radio-group formControlName="gender" style="display:flex;gap:12px">
-            <mat-radio-button value="male">Erkek</mat-radio-button>
-            <mat-radio-button value="female">Kız</mat-radio-button>
-          </mat-radio-group>
+          <mat-form-field appearance="fill" style="width:100%">
+            <mat-label>Sınıf (ör: 9A, 10B, 12AB)</mat-label>
+            <input matInput formControlName="class_name" maxlength="10" placeholder="Maks 10 karakter" />
+          </mat-form-field>
         </div>
 
         <div style="flex:1">
@@ -66,7 +65,7 @@ export class StudentAddEditDialogComponent {
     student_no: ['', Validators.required],
     first_name: ['', Validators.required],
     last_name: ['', Validators.required],
-    gender: ['male', Validators.required],
+  class_name: ['', [Validators.maxLength(10)]],
     birth_date: ['']
   });
 
@@ -79,7 +78,7 @@ export class StudentAddEditDialogComponent {
         student_no: s.student_no,
         first_name: s.first_name,
         last_name: s.last_name,
-  gender: s.gender || 'male',
+  class_name: s.class_name || '',
         birth_date: s.birth_date ? s.birth_date.split('T')[0] : ''
       });
     }
@@ -94,7 +93,7 @@ export class StudentAddEditDialogComponent {
       student_no: v.student_no,
       first_name: v.first_name,
       last_name: v.last_name,
-      gender: v.gender,
+      class_name: v.class_name || null,
       birth_date: v.birth_date || null
     };
     // If creating, attach current selected school's id. If editing, preserve existing school_id when present.

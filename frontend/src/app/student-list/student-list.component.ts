@@ -26,13 +26,14 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { AuthService } from '../services/auth.service';
+import { SortKeysPipe } from '../pipes/sort-keys.pipe';
 import { Subscription } from 'rxjs';
 // ChangeDetectorRef now imported from the consolidated core import above
 
 @Component({
   selector: 'app-student-list',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule, MatRippleModule, MatProgressSpinnerModule, MatCheckboxModule, MatSnackBarModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatTableModule, MatPaginatorModule, MatSortModule, MatDialogModule, MatTooltipModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule, MatRippleModule, MatProgressSpinnerModule, MatCheckboxModule, MatSnackBarModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatTableModule, MatPaginatorModule, MatSortModule, MatDialogModule, MatTooltipModule, SortKeysPipe],
   template: `
   <div class="container">
     <div class="header">
@@ -46,6 +47,10 @@ import { Subscription } from 'rxjs';
         </h1>
       </div>
       <div style="display:flex; gap:8px; align-items:center">
+        <button mat-stroked-button color="primary" (click)="openUpload()" class="upload-btn" style="height:40px;margin-right:4px">
+          <mat-icon fontSet="material-symbols-outlined">file_upload</mat-icon>
+          XLS yükle
+        </button>
         <button mat-raised-button color="primary" (click)="openAdd()" class="add-btn">
           <mat-icon fontSet="material-symbols-outlined">person_add</mat-icon>
           Yeni Öğrenci
@@ -62,12 +67,15 @@ import { Subscription } from 'rxjs';
         <mat-label>Ara</mat-label>
         <input matInput (input)="applyFilter($any($event.target).value)" placeholder="Ad, Soyad veya No ile ara" />
       </mat-form-field>
-      <mat-form-field appearance="fill" style="width:160px;">
-        <mat-label>Cinsiyet</mat-label>
-        <mat-select (selectionChange)="applyGenderFilter($event.value)" [value]="genderFilter">
+      <mat-form-field appearance="fill" style="width:240px;">
+        <mat-label>Sınıf</mat-label>
+        <mat-select (selectionChange)="applyClassFilter($event.value)" [value]="classFilter">
           <mat-option value="">Tümü</mat-option>
-          <mat-option value="male">Erkek</mat-option>
-          <mat-option value="female">Kız</mat-option>
+          <ng-container *ngFor="let g of (globalObject.keys(classGroups) | sortKeys)">
+            <mat-optgroup [label]="g">
+              <mat-option *ngFor="let c of classGroups[g]" [value]="c">{{ c }}</mat-option>
+            </mat-optgroup>
+          </ng-container>
         </mat-select>
       </mat-form-field>
     </div>
@@ -92,6 +100,12 @@ import { Subscription } from 'rxjs';
           </td>
         </ng-container>
 
+        <!-- Sınıf -->
+        <ng-container matColumnDef="class_name">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Sınıf</th>
+          <td mat-cell *matCellDef="let s">{{ s.class_name || '' }}</td>
+        </ng-container>
+
         <!-- Student No -->
         <ng-container matColumnDef="student_no">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Öğrenci No</th>
@@ -108,12 +122,6 @@ import { Subscription } from 'rxjs';
         <ng-container matColumnDef="last_name">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Soyadı</th>
           <td mat-cell *matCellDef="let s">{{ s.last_name }}</td>
-        </ng-container>
-
-        <!-- Gender -->
-        <ng-container matColumnDef="gender">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header>Cinsiyet</th>
-          <td mat-cell *matCellDef="let s">{{ s.gender === 'male' ? 'Erkek' : 'Kız' }}</td>
         </ng-container>
 
         <!-- Birth Date -->
@@ -178,10 +186,14 @@ export class StudentListComponent implements OnInit, AfterViewInit, OnDestroy {
   snack = inject(MatSnackBar);
   students: any[] = [];
   loading = false;
-  displayedColumns: string[] = ['select','student_no', 'first_name', 'last_name', 'gender', 'birth_date', 'actions'];
+  displayedColumns: string[] = ['select','class_name','student_no', 'first_name', 'last_name', 'birth_date', 'actions'];
   dataSource = new MatTableDataSource<any>([]);
   selection = new SelectionModel<any>(true, []);
-  genderFilter: string = '';
+  classFilter: string = '';
+  // expose global Object to template so we can call Object.keys() inside template without TS error
+  globalObject: any = Object;
+  // grouped classes: { grade: [classStrings] }
+  classGroups: { [grade: string]: string[] } = {};
 
   @ViewChild(MatPaginator, { static: true }) paginator!: MatPaginator;
   @ViewChild(MatSort, { static: true }) sort!: MatSort;
@@ -238,19 +250,19 @@ export class StudentListComponent implements OnInit, AfterViewInit, OnDestroy {
       return (v === null || v === undefined) ? '' : v;
     };
 
-    // Filter predicate expects the filter to be a JSON string: { text, gender }
+    // Filter predicate expects the filter to be a JSON string: { text, class_name }
     this.dataSource.filterPredicate = (data: any, filter: string) => {
-      let parsed = { text: '', gender: '' };
+      let parsed = { text: '', class_name: '' };
       try { parsed = JSON.parse(filter); } catch(e) { parsed.text = filter || ''; }
       const text = (parsed.text || '').toString().trim().toLowerCase();
-      const gender = (parsed.gender || '').toString();
+      const class_name = (parsed.class_name || '').toString();
       const matchesText = !text || (
         (data.student_no || '').toString().toLowerCase().includes(text) ||
         (data.first_name || '').toString().toLowerCase().includes(text) ||
         (data.last_name || '').toString().toLowerCase().includes(text)
       );
-      const matchesGender = !gender || (data.gender === gender);
-      return matchesText && matchesGender;
+      const matchesClass = !class_name || (data.class_name === class_name);
+      return matchesText && matchesClass;
     };
 
     // ensure table renders with new settings
@@ -259,18 +271,18 @@ export class StudentListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   applyFilter(value: string) {
     const filterValue = (value || '').trim().toLowerCase();
-    // combine text + gender into a single filter object stored as JSON string
-    const combined = JSON.stringify({ text: filterValue, gender: this.genderFilter || '' });
+  // combine text + class_name into a single filter object stored as JSON string
+  const combined = JSON.stringify({ text: filterValue, class_name: this.classFilter || '' });
     // predicate will be set elsewhere but ensure default if needed
     this.dataSource.filter = combined;
   }
 
-  applyGenderFilter(val: string) {
-    this.genderFilter = val || '';
-    const combined = JSON.stringify({ text: (''), gender: this.genderFilter || '' });
+  applyClassFilter(val: string) {
+    this.classFilter = val || '';
+    const combined = JSON.stringify({ text: (''), class_name: this.classFilter || '' });
     // keep current search text if any
     const cur = this.dataSource.filter ? JSON.parse(this.dataSource.filter) : { text: '' };
-    combined && (this.dataSource.filter = JSON.stringify({ text: cur.text || '', gender: this.genderFilter }));
+    combined && (this.dataSource.filter = JSON.stringify({ text: cur.text || '', class_name: this.classFilter }));
   }
 
   isAllSelected() {
@@ -336,21 +348,42 @@ export class StudentListComponent implements OnInit, AfterViewInit, OnDestroy {
                   const v = data[property];
                   return (v === null || v === undefined) ? '' : v;
                 };
-                // ensure filter predicate exists (combined text + gender)
+                // ensure filter predicate exists (combined text + class_name)
                 this.dataSource.filterPredicate = (data: any, filter: string) => {
-                  let parsed = { text: '', gender: '' };
+                  let parsed = { text: '', class_name: '' };
                   try { parsed = JSON.parse(filter); } catch(e) { parsed.text = filter || ''; }
                   const text = (parsed.text || '').toString().trim().toLowerCase();
-                  const gender = (parsed.gender || '').toString();
+                  const class_name = (parsed.class_name || '').toString();
                   const matchesText = !text || (
                     (data.student_no || '').toString().toLowerCase().includes(text) ||
                     (data.first_name || '').toString().toLowerCase().includes(text) ||
                     (data.last_name || '').toString().toLowerCase().includes(text)
                   );
-                  const matchesGender = !gender || (data.gender === gender);
-                  return matchesText && matchesGender;
+                  const matchesClass = !class_name || (data.class_name === class_name);
+                  return matchesText && matchesClass;
                 };
-                this.loading = false;
+                    // fetch class list from server (distinct class_name values) and build groups
+                    this.classGroups = {};
+                    this.http.get<string[]>(`/api/students/school/${schoolId}/classes`, headers ? { headers } : {}).subscribe({
+                      next: classes => {
+                        (classes || []).forEach((clsRaw: string) => {
+                          const cls = (clsRaw || '').toString().trim();
+                          if (!cls) return;
+                          const gMatch = cls.match(/^(\d{1,2})/);
+                          const grade = gMatch ? gMatch[1] : 'Diğer';
+                          this.classGroups[grade] = this.classGroups[grade] || [];
+                          if (!this.classGroups[grade].includes(cls)) this.classGroups[grade].push(cls);
+                        });
+                        Object.keys(this.classGroups).forEach(k => this.classGroups[k].sort());
+                        // trigger change detection after classes loaded
+                        try { this.cdr.detectChanges(); } catch(e) { /* ignore */ }
+                      },
+                      error: err => {
+                        console.warn('Failed to load class list', err);
+                      }
+                    });
+
+                    this.loading = false;
                 try { this.cdr.detectChanges(); } catch(e) { /* ignore */ }
           });
       },
@@ -370,6 +403,16 @@ export class StudentListComponent implements OnInit, AfterViewInit, OnDestroy {
   openAdd() {
     import('../student-add-edit-dialog/student-add-edit-dialog.component').then(m => {
       const ref = this.dialog.open(m.StudentAddEditDialogComponent, { data: {} });
+      ref.afterClosed().subscribe(() => {
+        const s = this.auth.getSelectedSchool();
+        if (s) this.load(s.id);
+      });
+    });
+  }
+
+  openUpload() {
+    import('../student-bulk-upload-dialog/student-bulk-upload-dialog.component').then(m => {
+      const ref = this.dialog.open(m.StudentBulkUploadDialogComponent, { data: {}, width: '560px', maxWidth: '90vw' });
       ref.afterClosed().subscribe(() => {
         const s = this.auth.getSelectedSchool();
         if (s) this.load(s.id);

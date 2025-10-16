@@ -6,7 +6,7 @@ const Student = sequelize.define('Student', {
   student_no: { type: DataTypes.STRING(32), allowNull: false, unique: true, comment: 'Öğrenci numarası' },
   first_name: { type: DataTypes.STRING(100), allowNull: false },
   last_name: { type: DataTypes.STRING(100), allowNull: false },
-    gender: { type: DataTypes.ENUM('male', 'female'), allowNull: false, defaultValue: 'male' },
+  class_name: { type: DataTypes.STRING(10), allowNull: true, comment: 'Öğrenci sınıfı (ör. 9A, 10B) - maksimum 10 karakter' },
   birth_date: { type: DataTypes.DATEONLY, allowNull: true },
   school_id: { type: DataTypes.INTEGER, allowNull: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

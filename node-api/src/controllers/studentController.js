@@ -12,6 +12,35 @@ exports.listBySchool = async (req, res) => {
   }
 };
 
+exports.listClassesBySchool = async (req, res) => {
+  try {
+    const schoolId = parseInt(req.params.schoolId, 10);
+    if (isNaN(schoolId)) return res.status(400).json({ error: 'Invalid school id' });
+    const { sequelize } = require('../models/relations');
+    // inspect table columns to avoid referencing a missing legacy column
+    const db = sequelize.config.database;
+    const [cols] = await sequelize.query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'students'`, { replacements: [db] });
+    const colNames = (cols || []).map(r => (r.COLUMN_NAME || r.column_name || '').toString().toLowerCase());
+    const hasClassName = colNames.includes('class_name');
+    const hasSinif = colNames.includes('sinif');
+
+    let rows = [];
+    if (hasClassName) {
+      rows = await sequelize.query(`SELECT DISTINCT class_name AS cls FROM students WHERE school_id = ? AND class_name IS NOT NULL AND class_name != '' ORDER BY cls ASC`, { replacements: [schoolId], type: sequelize.QueryTypes.SELECT });
+    } else if (hasSinif) {
+      rows = await sequelize.query(`SELECT DISTINCT sinif AS cls FROM students WHERE school_id = ? AND sinif IS NOT NULL AND sinif != '' ORDER BY cls ASC`, { replacements: [schoolId], type: sequelize.QueryTypes.SELECT });
+    } else {
+      // no class column present
+      return res.json([]);
+    }
+    const classes = (rows || []).map(r => r.cls).filter(Boolean);
+    res.json(classes);
+  } catch (err) {
+    console.error('List classes error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 exports.get = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
