@@ -1,4 +1,4 @@
-# Okul Bilgisayar Bakım Sistemi - PWA
+# okulum.cloud bilgi sistemi - PWA
 
 Angular uygulamanızda PWA desteği aktif edildi.
 

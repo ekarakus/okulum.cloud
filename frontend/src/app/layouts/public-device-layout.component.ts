@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
         <router-outlet></router-outlet>
       </div>
       <footer class="public-footer">
-        <span>© {{year}} Okul Bilgisayar Bakım Sistemi</span>
+        <span>© {{year}} okulum.cloud bilgi sistemi</span>
       </footer>
     </div>
   `,

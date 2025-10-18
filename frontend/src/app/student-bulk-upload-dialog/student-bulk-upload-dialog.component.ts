@@ -19,7 +19,7 @@ import { ChangeDetectorRef } from '@angular/core';
   template: `
     <h2 mat-dialog-title>XLS ile Öğrenci Yükle</h2>
     <div mat-dialog-content style="position:relative;">
-  <p>Lütfen XLS veya XLSX formatında dosya yükleyiniz. Beklenen başlıklar (sırası önemli): <strong>SINIF, NO, ADI, SOYADI, DOĞUM TARİHİ (gg/aa/YYYY veya gg-aa-YYYY)</strong></p>
+  <p>Lütfen XLS veya XLSX formatında dosya yükleyiniz. Beklenen başlıklar (sırası önemli): <strong>SINIF, NO, ADI, SOYADI, DOĞUM TARİHİ (gg/aa/YYYY, gg-aa-YYYY veya gg.aa.YYYY)</strong></p>
       <div style="display:flex; align-items:center; gap:8px;">
         <input type="file" accept=".xls,.xlsx" (change)="onFile($event)" [disabled]="isUploading" />
         <button mat-button (click)="downloadTemplate()" style="margin-left:8px;" [disabled]="isUploading">Örnek Dosya İndir</button>

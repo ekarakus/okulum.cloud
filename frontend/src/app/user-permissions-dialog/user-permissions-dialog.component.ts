@@ -32,7 +32,13 @@ import { HttpClient } from '@angular/common/http';
       <button mat-button (click)="onCancel()">İptal</button>
       <button mat-raised-button color="primary" (click)="onSave()">Kaydet</button>
     </mat-dialog-actions>
-  `
+  `,
+  styles: [
+`
+    .perm-list { display:flex; flex-direction:column; gap:0.5rem; max-height:50vh; overflow:auto; }
+    .perm-row { display:flex; flex-direction:column; }
+`
+  ]
 })
 export class UserPermissionsDialogComponent implements OnInit {
   assignedIds: number[] = [];

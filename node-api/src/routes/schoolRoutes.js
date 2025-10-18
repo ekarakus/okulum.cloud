@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const schoolController = require('../controllers/schoolController');
 const { authenticateToken, requireSuperAdmin, checkSchoolAccess, addUserSchools } = require('../middleware/auth');
+const schoolObservancesCtrl = require('../controllers/schoolObservancesController');
 
 // Kullanıcının okullarını getir
 router.get('/my-schools', authenticateToken, schoolController.getUserSchools);
@@ -29,5 +30,15 @@ router.post('/assign-user', authenticateToken, requireSuperAdmin, schoolControll
 
 // Kullanıcının okul atamasını kaldır (sadece super_admin)
 router.post('/remove-user', authenticateToken, requireSuperAdmin, schoolController.removeUserFromSchool);
+
+// Import standard observances from JSON for a school (requires school access)
+router.post('/:school_id/observances/import-from-json', authenticateToken, checkSchoolAccess, schoolObservancesCtrl.importFromJson);
+
+// CRUD for school observances
+router.get('/:school_id/observances', authenticateToken, checkSchoolAccess, schoolObservancesCtrl.list);
+router.post('/:school_id/observances', authenticateToken, checkSchoolAccess, schoolObservancesCtrl.create);
+router.put('/:school_id/observances/:id', authenticateToken, checkSchoolAccess, schoolObservancesCtrl.update);
+router.delete('/:school_id/observances/:id', authenticateToken, checkSchoolAccess, schoolObservancesCtrl.remove);
+router.post('/:school_id/observances/bulk-delete', authenticateToken, checkSchoolAccess, schoolObservancesCtrl.bulkRemove);
 
 module.exports = router;

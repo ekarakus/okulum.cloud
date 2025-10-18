@@ -69,6 +69,8 @@ exports.createAnnouncement = async (req, res) => {
       content: payload.content || null,
       publish_date: payload.publish_date || null,
       end_date: payload.end_date || null,
+      publish_start_time: payload.publish_start_time || null,
+      publish_end_time: payload.publish_end_time || null,
       is_active: typeof payload.is_active !== 'undefined' ? !!payload.is_active : true,
       created_by: req.user ? req.user.id : null,
       ord: payload.ord || 0
@@ -94,6 +96,8 @@ exports.updateAnnouncement = async (req, res) => {
       content: typeof payload.content !== 'undefined' ? payload.content : announcement.content,
       publish_date: typeof payload.publish_date !== 'undefined' ? payload.publish_date : announcement.publish_date,
       end_date: typeof payload.end_date !== 'undefined' ? payload.end_date : announcement.end_date,
+      publish_start_time: typeof payload.publish_start_time !== 'undefined' ? payload.publish_start_time : announcement.publish_start_time,
+      publish_end_time: typeof payload.publish_end_time !== 'undefined' ? payload.publish_end_time : announcement.publish_end_time,
       is_active: typeof payload.is_active !== 'undefined' ? !!payload.is_active : announcement.is_active,
       updated_by: req.user ? req.user.id : announcement.updated_by,
       ord: typeof payload.ord !== 'undefined' ? payload.ord : announcement.ord

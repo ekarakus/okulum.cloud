@@ -35,7 +35,7 @@ export interface UserDialogData {
   ],
   template: `
     <h2 mat-dialog-title>
-      <mat-icon>{{ data.mode === 'add' ? 'person_add' : 'edit' }}</mat-icon>
+      <mat-icon fontSet="material-symbols-outlined">{{ data.mode === 'add' ? 'person_add' : 'edit' }}</mat-icon>
       {{ data.mode === 'add' ? 'Yeni Kullanıcı Ekle' : 'Kullanıcıyı Düzenle' }}
     </h2>
     <mat-dialog-content>
@@ -56,9 +56,22 @@ export interface UserDialogData {
 
         <mat-form-field appearance="outline" *ngIf="data.mode === 'add'">
           <mat-label>Şifre</mat-label>
-          <input matInput formControlName="password" required type="password">
+          <input matInput [type]="showPassword ? 'text' : 'password'" formControlName="password" required>
+          <button mat-icon-button matSuffix (click)="toggleShowPassword()" type="button" aria-label="Show password">
+            <mat-icon fontSet="material-symbols-outlined">{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
           <mat-error *ngIf="userForm.get('password')?.hasError('required')">Şifre zorunludur.</mat-error>
           <mat-error *ngIf="userForm.get('password')?.hasError('minlength')">Şifre en az 6 karakter olmalıdır.</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" *ngIf="data.mode === 'add'">
+          <mat-label>Şifre (Tekrar)</mat-label>
+          <input matInput [type]="showPasswordConfirm ? 'text' : 'password'" formControlName="passwordConfirm" required>
+          <button mat-icon-button matSuffix (click)="toggleShowPasswordConfirm()" type="button" aria-label="Show password confirm">
+            <mat-icon fontSet="material-symbols-outlined">{{ showPasswordConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-error *ngIf="userForm.get('passwordConfirm')?.hasError('required')">Şifre tekrarı zorunludur.</mat-error>
+          <mat-error *ngIf="userForm.hasError('passwordMismatch')">Şifreler eşleşmiyor.</mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -124,10 +137,13 @@ export class UserDialogComponent implements OnInit {
       name: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       password: ['', this.data.mode === 'add' ? [Validators.required, Validators.minLength(6)] : []],
+      passwordConfirm: ['', this.data.mode === 'add' ? [Validators.required] : []],
   role: ['admin', Validators.required],
       is_active: [true],
       school_assignments: this.fb.array([])
     });
+    // add cross-field validator for password match
+    this.userForm.setValidators(this.passwordsMatchValidator.bind(this));
   }
 
   ngOnInit(): void {
@@ -144,6 +160,20 @@ export class UserDialogComponent implements OnInit {
       this.selectedSchoolIds = (userSchools || []).map((s: School) => s.id);
       this.rebuildAssignmentsFromSelected();
     }
+  }
+
+  showPassword = false;
+  showPasswordConfirm = false;
+
+  toggleShowPassword() { this.showPassword = !this.showPassword; }
+  toggleShowPasswordConfirm() { this.showPasswordConfirm = !this.showPasswordConfirm; }
+
+  passwordsMatchValidator(control: import('@angular/forms').AbstractControl) : import('@angular/forms').ValidationErrors | null {
+    if (this.data.mode !== 'add') return null;
+    const form = control as FormGroup;
+    const pw = form.get('password')?.value;
+    const pwc = form.get('passwordConfirm')?.value;
+    return pw && pwc && pw !== pwc ? { passwordMismatch: true } : null;
   }
 
   get schoolAssignments(): FormArray {

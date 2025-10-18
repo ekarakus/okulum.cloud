@@ -50,8 +50,8 @@ import { ChangeDetectorRef } from '@angular/core';
             <tr style="background-color: #f5f5f5;">
               <th style="padding: 6px 12px; text-align:left; border-bottom:1px solid #ddd; width:60px">#</th>
               <th style="padding: 6px 12px; text-align:left; border-bottom:1px solid #ddd;">Başlık</th>
-              <th style="padding: 6px 12px; text-align:left; border-bottom:1px solid #ddd;">Başlangıç</th>
-              <th style="padding: 6px 12px; text-align:left; border-bottom:1px solid #ddd;">Bitiş</th>
+              <th style="padding: 6px 12px; text-align:left; border-bottom:1px solid #ddd;">Yayın tarihleri</th>
+              <th style="padding: 6px 12px; text-align:left; border-bottom:1px solid #ddd;">Yayın saatleri</th>
               <th style="padding: 6px 12px; text-align:left; border-bottom:1px solid #ddd;">Durum</th>
               <th style="padding: 6px 12px; text-align:left; border-bottom:1px solid #ddd;">İşlemler</th>
             </tr>
@@ -63,8 +63,15 @@ import { ChangeDetectorRef } from '@angular/core';
             <tr *ngFor="let a of pagedAnnouncements; let i = index" style="border-bottom:1px solid #eee;">
               <td style="padding:6px 12px; text-align:center">{{ pageIndex * pageSize + i + 1 }}</td>
               <td style="padding:6px 12px">{{ a.title }}</td>
-              <td style="padding:6px 12px">{{ formatDate(a.publish_date) || '-' }}</td>
-              <td style="padding:6px 12px">{{ formatDate(a.end_date) || '-' }}</td>
+              <td style="padding:6px 12px">
+                <div>{{ formatDate(a.publish_date) || '-' }}</div>
+                <div *ngIf="a.end_date" style="color:#666;font-size:0.9rem;margin-top:4px">Bitiş: {{ formatDate(a.end_date) }}</div>
+              </td>
+              <td style="padding:6px 12px">
+                <div *ngIf="a.publish_start_time">Başlama: {{ a.publish_start_time }}</div>
+                <div *ngIf="a.publish_end_time" style="color:#666;font-size:0.9rem;margin-top:4px">Bitiş: {{ a.publish_end_time }}</div>
+                <div *ngIf="!a.publish_start_time && !a.publish_end_time">-</div>
+              </td>
               <td style="padding:6px 12px">{{ a.is_active ? 'Aktif' : 'Pasif' }}</td>
               <td style="padding:6px 12px">
                 <button mat-button color="accent" (click)="edit(a)" style="margin-right:6px">

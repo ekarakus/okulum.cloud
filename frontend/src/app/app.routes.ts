@@ -126,6 +126,16 @@ export const routes: Routes = [
         data: { requiresSchool: true }
       },
       {
+        path: 'info-nuggets',
+        loadComponent: () => import('./info-nuggets/info-nuggets-list.component').then(m => m.InfoNuggetsListComponent),
+        data: { requiresSchool: true }
+      },
+      {
+        path: 'info-nugget-categories',
+        loadComponent: () => import('./info-nuggets/info-nugget-categories.component').then(m => m.InfoNuggetCategoriesComponent),
+        data: { requiresSchool: true }
+      },
+      {
         path: 'students',
         loadComponent: () => import('./student-list/student-list.component').then(m => m.StudentListComponent),
         data: { requiresSchool: true }
@@ -134,6 +144,12 @@ export const routes: Routes = [
         path: 'operations',
         loadComponent: () => import('./operation-list/operation-list.component').then(m => m.OperationListComponent),
         data: { requiresSchool: true, prerender: false }
+      }
+      ,
+      {
+        path: 'observances',
+        loadComponent: () => import('./observances/observances-list.component').then(m => m.ObservancesListComponent),
+        data: { requiresSchool: true }
       }
       ,
       {

@@ -8,6 +8,9 @@ const Announcement = sequelize.define('Announcement', {
   content: { type: DataTypes.TEXT, allowNull: true },
   publish_date: { type: DataTypes.DATE, allowNull: true },
   end_date: { type: DataTypes.DATE, allowNull: true },
+  // daily publish start/end times (time of day only)
+  publish_start_time: { type: DataTypes.TIME, allowNull: true },
+  publish_end_time: { type: DataTypes.TIME, allowNull: true },
   is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
   created_by: { type: DataTypes.INTEGER, allowNull: true },
   updated_by: { type: DataTypes.INTEGER, allowNull: true },

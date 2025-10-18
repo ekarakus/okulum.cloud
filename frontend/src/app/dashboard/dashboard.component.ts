@@ -44,9 +44,17 @@ import { apiBase } from '../runtime-config';
             <span class="material-symbols-outlined action-icon" aria-hidden="true">campaign</span>
             Duyurular
           </button>
+          <button mat-raised-button routerLink="/info-nuggets" class="action-btn info-nuggets-btn">
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">info</span>
+            Bilgi Kartları
+          </button>
           <button mat-raised-button routerLink="/students" class="action-btn students-btn">
             <span class="material-symbols-outlined action-icon" aria-hidden="true">people_alt</span>
             Öğrenciler
+          </button>
+          <button mat-raised-button routerLink="/observances" class="action-btn observances-btn">
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">event</span>
+            Belirli Gün ve Haftalar
           </button>
         </div>
       </div>

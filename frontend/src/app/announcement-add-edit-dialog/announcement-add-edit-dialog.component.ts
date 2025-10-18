@@ -39,22 +39,25 @@ import { environment } from '../../environments/environment';
         <input matInput type="date" (change)="onPublishDateNativeChange($any($event.target).value)" [value]="formatDateOnlyForInput(getPublishDateOnly())" />
       </mat-form-field>
 
-      <mat-form-field appearance="fill" style="width:120px">
-        <mat-label>Yayın Saati</mat-label>
-        <input matInput type="time" (change)="onPublishTimeChange($any($event.target).value)" [value]="getPublishTimeOnly()" />
-      </mat-form-field>
-
       <mat-form-field appearance="fill" style="width:220px">
         <mat-label>Bitiş Tarihi</mat-label>
         <input matInput type="date" (change)="onEndDateNativeChange($any($event.target).value)" [value]="formatDateOnlyForInput(getEndDateOnly())" />
       </mat-form-field>
-
-      <mat-form-field appearance="fill" style="width:120px">
-        <mat-label>Bitiş Saati</mat-label>
-        <input matInput type="time" (change)="onEndTimeChange($any($event.target).value)" [value]="getEndTimeOnly()" />
-      </mat-form-field>
     </div>
     <div *ngIf="form.get('publish_date')?.touched && form.get('publish_date')?.hasError('required')" style="color:crimson;font-size:12px;margin-bottom:8px">Yayınlanma tarihi boş bırakılamaz.</div>
+
+    <!-- time inputs directly after the date inputs, side-by-side -->
+    <div style="display:flex;gap:12px;align-items:center;margin-top:8px">
+      <mat-form-field appearance="fill" style="width:220px">
+        <mat-label>Gün içi yayın başlama saati</mat-label>
+        <input matInput type="time" formControlName="publish_start_time" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" style="width:220px">
+        <mat-label>Yayın bitirme saati</mat-label>
+        <input matInput type="time" formControlName="publish_end_time" />
+      </mat-form-field>
+    </div>
     <div *ngIf="form.hasError('publishTooEarly')" style="color:crimson;font-size:12px;margin-bottom:8px">Başlama tarihi bugünden önce olamaz.</div>
 
 
@@ -67,6 +70,8 @@ import { environment } from '../../environments/environment';
       </mat-form-field>
       <mat-checkbox formControlName="is_active" style="margin-top:8px">Aktif</mat-checkbox>
     </div>
+
+
 
     <div *ngIf="form.get('contentHtml')?.touched && form.get('contentHtml')?.hasError('required')" style="color:crimson;font-size:12px;margin-bottom:8px">İçerik boş bırakılamaz.</div>
   </mat-dialog-content>
@@ -91,6 +96,9 @@ export class AnnouncementAddEditDialogComponent {
     order: [0],
     publish_date: ['', [Validators.required]],
     end_date: [''],
+    // time-only fields (HH:mm)
+    publish_start_time: [''],
+    publish_end_time: [''],
     is_active: [true]
   }, { validators: this.dateRangeValidator.bind(this) });
 
@@ -127,6 +135,8 @@ export class AnnouncementAddEditDialogComponent {
         // normalize to local 'YYYY-MM-DDTHH:mm' for datetime-local input
         publish_date: a.publish_date ? this.formatDateForInput(new Date(a.publish_date)) : '',
         end_date: a.end_date ? this.formatDateForInput(new Date(a.end_date)) : '',
+        publish_start_time: a.publish_start_time || (a.publish_date ? this.getPublishTimeOnly() : ''),
+        publish_end_time: a.publish_end_time || (a.end_date ? this.getEndTimeOnly() : ''),
         is_active: !!a.is_active
       });
       // set initial editor HTML if present (DOM will be updated via bindings)
@@ -206,6 +216,9 @@ export class AnnouncementAddEditDialogComponent {
   }
 
   getPublishTimeOnly() {
+    // prefer explicit publish_start_time form control if set
+    const ctl = this.form.get('publish_start_time')?.value;
+    if (ctl && ctl.toString().trim()) return ctl.toString();
     const v = this.form.get('publish_date')?.value;
     if (!v) return '08:00';
     const d = new Date(v);
@@ -222,6 +235,9 @@ export class AnnouncementAddEditDialogComponent {
   }
 
   getEndTimeOnly() {
+    // prefer explicit publish_end_time form control if set
+    const ctl = this.form.get('publish_end_time')?.value;
+    if (ctl && ctl.toString().trim()) return ctl.toString();
     const v = this.form.get('end_date')?.value;
     if (!v) return '08:00';
     const d = new Date(v);
@@ -276,6 +292,9 @@ export class AnnouncementAddEditDialogComponent {
       order: v.order != null ? Number(v.order) : 0,
       publish_date: publishIso,
       end_date: endIso,
+      // time-only fields (HH:mm)
+      publish_start_time: (v.publish_start_time && v.publish_start_time.toString().trim()) ? v.publish_start_time : this.getPublishTimeOnly(),
+      publish_end_time: (v.publish_end_time && v.publish_end_time.toString().trim()) ? v.publish_end_time : this.getEndTimeOnly(),
       is_active: !!v.is_active
     };
 

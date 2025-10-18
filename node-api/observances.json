@@ -1,0 +1,485 @@
+[
+  {
+    "key": "uluslararasi_temiz_hava_gunu",
+    "name": "Uluslararası Temiz Hava Günü",
+    "description": "7 Eylül",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 7, "month": 9 }
+  },
+  {
+    "key": "dunya_ilk_yardim_gunu",
+    "name": "Dünya İlk Yardım Günü",
+    "description": "Eylül ayının ikinci cumartesi günü",
+    "calculation_type": "NTH_DAY_IN_MONTH",
+    "params": { "month": 9, "nth": 2, "day_of_week": 6 }
+  },
+  {
+    "key": "ilkogretim_haftasi",
+    "name": "İlköğretim Haftası",
+    "description": "Eylül ayının 3. haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 9, "nth": 3 }
+  },
+  {
+    "key": "ogrenciler_gunu",
+    "name": "Öğrenciler Günü",
+    "description": "İlköğretim Haftasının son günü",
+    "calculation_type": "MANUAL",
+    "params": {}
+  },
+  {
+    "key": "gaziler_gunu",
+    "name": "Gaziler Günü",
+    "description": "19 Eylül",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 19, "month": 9 }
+  },
+  {
+    "key": "15_temmuz_demokrasi_gunu",
+    "name": "15 Temmuz Demokrasi ve Millî Birlik Günü",
+    "description": "15 Temmuz",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 15, "month": 7 }
+  },
+  {
+    "key": "dunya_okul_sutu_gunu",
+    "name": "Dünya Okul Sütü Günü",
+    "description": "28 Eylül",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 28, "month": 9 }
+  },
+  {
+    "key": "disleksi_haftasi",
+    "name": "Disleksi Haftası",
+    "description": "Ekim ayının ilk haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 10, "nth": 1 }
+  },
+  {
+    "key": "dunya_disleksi_gunu",
+    "name": "Dünya Disleksi Günü",
+    "description": "Ekim ayının ilk haftasının perşembe günü",
+    "calculation_type": "NTH_DAY_IN_MONTH",
+    "params": { "month": 10, "nth": 1, "day_of_week": 4 }
+  },
+  {
+    "key": "mevlid_i_nebi_haftasi",
+    "name": "Mevlid-i Nebî Haftası",
+    "description": "Diyanet İşleri Başkanlığınca belirlenecek haftada",
+    "calculation_type": "MANUAL",
+    "params": {}
+  },
+  {
+    "key": "hayvanlari_koruma_gunu",
+    "name": "Hayvanları Koruma Günü",
+    "description": "4 Ekim",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 4, "month": 10 }
+  },
+  {
+    "key": "ahilik_kulturu_haftasi",
+    "name": "Ahilik Kültürü Haftası",
+    "description": "8-12 Ekim",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 8, "start_month": 10, "end_day": 12, "end_month": 10 }
+  },
+  {
+    "key": "dunya_afet_azaltma_gunu",
+    "name": "Dünya Afet Azaltma Günü",
+    "description": "13 Ekim",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 13, "month": 10 }
+  },
+  {
+    "key": "birlesmis_milletler_gunu",
+    "name": "Birleşmiş Milletler Günü",
+    "description": "24 Ekim",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 24, "month": 10 }
+  },
+  {
+    "key": "cumhuriyet_bayrami",
+    "name": "Cumhuriyet Bayramı",
+    "description": "29 Ekim",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 29, "month": 10 }
+  },
+  {
+    "key": "kizilay_haftasi",
+    "name": "Kızılay Haftası",
+    "description": "29 Ekim-4 Kasım",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 29, "start_month": 10, "end_day": 4, "end_month": 11 }
+  },
+  {
+    "key": "organ_bagisi_haftasi",
+    "name": "Organ Bağışı ve Nakli Haftası",
+    "description": "3-9 Kasım",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 3, "start_month": 11, "end_day": 9, "end_month": 11 }
+  },
+  {
+    "key": "losemili_cocuklar_haftasi",
+    "name": "Lösemili Çocuklar Haftası",
+    "description": "2-8 Kasım",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 2, "start_month": 11, "end_day": 8, "end_month": 11 }
+  },
+  {
+    "key": "ataturk_haftasi",
+    "name": "Atatürk Haftası",
+    "description": "10-16 Kasım",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 10, "start_month": 11, "end_day": 16, "end_month": 11 }
+  },
+  {
+    "key": "dunya_diyabet_gunu",
+    "name": "Dünya Diyabet Günü",
+    "description": "14 Kasım",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 14, "month": 11 }
+  },
+  {
+    "key": "afet_egitimi_hazirlik_gunu",
+    "name": "Afet Eğitimi Hazırlık Günü",
+    "description": "12 Kasım",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 12, "month": 11 }
+  },
+  {
+    "key": "dunya_felsefe_gunu",
+    "name": "Dünya Felsefe Günü",
+    "description": "20 Kasım",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 20, "month": 11 }
+  },
+  {
+    "key": "dunya_cocuk_haklari_gunu",
+    "name": "Dünya Çocuk Hakları Günü",
+    "description": "20 Kasım",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 20, "month": 11 }
+  },
+  {
+    "key": "agiz_ve_dis_sagligi_haftasi",
+    "name": "Ağız ve Diş Sağlığı Haftası",
+    "description": "21-27 Kasım",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 21, "start_month": 11, "end_day": 27, "end_month": 11 }
+  },
+  {
+    "key": "ogretmenler_gunu",
+    "name": "Öğretmenler Günü",
+    "description": "24 Kasım",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 24, "month": 11 }
+  },
+  {
+    "key": "dunya_engelliler_gunu",
+    "name": "Dünya Engelliler Günü",
+    "description": "3 Aralık",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 3, "month": 12 }
+  },
+  {
+    "key": "dunya_madenciler_gunu",
+    "name": "Dünya Madenciler Günü",
+    "description": "4 Aralık",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 4, "month": 12 }
+  },
+  {
+    "key": "turk_kadinina_secme_hakki",
+    "name": "Türk Kadınına Seçme ve Seçilme Hakkının Verilişi",
+    "description": "5 Aralık",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 5, "month": 12 }
+  },
+  {
+    "key": "mevlana_haftasi",
+    "name": "Mevlana Haftası",
+    "description": "07-17 Aralık",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 7, "start_month": 12, "end_day": 17, "end_month": 12 }
+  },
+  {
+    "key": "insan_haklari_haftasi",
+    "name": "İnsan Hakları ve Demokrasi Haftası",
+    "description": "10 Aralık gününü içine alan hafta",
+    "calculation_type": "WEEK_OF_DATE",
+    "params": { "day": 10, "month": 12 }
+  },
+  {
+    "key": "tutum_yatirim_turk_mallari_haftasi",
+    "name": "Tutum, Yatırım ve Türk Malları Haftası",
+    "description": "12-18 Aralık",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 12, "start_month": 12, "end_day": 18, "end_month": 12 }
+  },
+  {
+    "key": "mehmet_akif_ersoyu_anma_haftasi",
+    "name": "Mehmet Akif Ersoy’u Anma Haftası",
+    "description": "20-27 Aralık",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 20, "start_month": 12, "end_day": 27, "end_month": 12 }
+  },
+  {
+    "key": "enerji_tasarrufu_haftasi",
+    "name": "Enerji Tasarrufu Haftası",
+    "description": "Ocak ayının 2. haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 1, "nth": 2 }
+  },
+  {
+    "key": "vergi_haftasi",
+    "name": "Vergi Haftası",
+    "description": "Şubat ayının son haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 2, "nth": -1 }
+  },
+  {
+    "key": "yesilay_haftasi",
+    "name": "Yeşilay Haftası",
+    "description": "1 Mart gününü içine alan hafta",
+    "calculation_type": "WEEK_OF_DATE",
+    "params": { "day": 1, "month": 3 }
+  },
+  {
+    "key": "girisimcilik_haftasi",
+    "name": "Girişimcilik Haftası",
+    "description": "Mart ayının ilk haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 3, "nth": 1 }
+  },
+  {
+    "key": "dunya_kadinlar_gunu",
+    "name": "Dünya Kadınlar Günü",
+    "description": "8 Mart",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 8, "month": 3 }
+  },
+  {
+    "key": "bilim_ve_teknoloji_haftasi",
+    "name": "Bilim ve Teknoloji Haftası",
+    "description": "8-14 Mart",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 8, "start_month": 3, "end_day": 14, "end_month": 3 }
+  },
+  {
+    "key": "istiklal_marsinin_kabulu",
+    "name": "İstiklâl Marşı’nın Kabulü ve Mehmet Akif Ersoy’u Anma Günü",
+    "description": "12 Mart",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 12, "month": 3 }
+  },
+  {
+    "key": "tuketiciyi_koruma_haftasi",
+    "name": "Tüketiciyi Koruma Haftası",
+    "description": "15-21 Mart",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 15, "start_month": 3, "end_day": 21, "end_month": 3 }
+  },
+  {
+    "key": "sehitler_gunu",
+    "name": "Şehitler Günü",
+    "description": "18 Mart",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 18, "month": 3 }
+  },
+  {
+    "key": "yaslilar_haftasi",
+    "name": "Yaşlılar Haftası",
+    "description": "18-24 Mart",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 18, "start_month": 3, "end_day": 24, "end_month": 3 }
+  },
+  {
+    "key": "turk_dunyasi_haftasi",
+    "name": "Türk Dünyası ve Toplulukları Haftası",
+    "description": "21 Mart Nevruz gününü içine alan hafta",
+    "calculation_type": "WEEK_OF_DATE",
+    "params": { "day": 21, "month": 3 }
+  },
+  {
+    "key": "orman_haftasi",
+    "name": "Orman Haftası",
+    "description": "21-26 Mart",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 21, "start_month": 3, "end_day": 26, "end_month": 3 }
+  },
+  {
+    "key": "dunya_su_gunu",
+    "name": "Dünya Su Günü",
+    "description": "22 Mart",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 22, "month": 3 }
+  },
+  {
+    "key": "dunya_tiyatrolar_gunu",
+    "name": "Dünya Tiyatrolar Günü",
+    "description": "27 Mart",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 27, "month": 3 }
+  },
+  {
+    "key": "kutuphaneler_haftasi",
+    "name": "Kütüphaneler Haftası",
+    "description": "Mart ayının son pazartesi gününü içine alan hafta",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 3, "nth": -1 }
+  },
+  {
+    "key": "kanser_haftasi",
+    "name": "Kanser Haftası",
+    "description": "1–7 Nisan",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 1, "start_month": 4, "end_day": 7, "end_month": 4 }
+  },
+  {
+    "key": "dunya_otizm_farkindalik_gunu",
+    "name": "Dünya Otizm Farkındalık Günü",
+    "description": "2 Nisan",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 2, "month": 4 }
+  },
+  {
+    "key": "kisisel_verileri_koruma_gunu",
+    "name": "Kişisel Verileri Koruma Günü",
+    "description": "7 Nisan",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 7, "month": 4 }
+  },
+  {
+    "key": "dunya_saglik_haftasi",
+    "name": "Dünya Sağlık Günü/Dünya Sağlık Haftası",
+    "description": "7-13 Nisan",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 7, "start_month": 4, "end_day": 13, "end_month": 4 }
+  },
+  {
+    "key": "turizm_haftasi",
+    "name": "Turizm Haftası",
+    "description": "15-22 Nisan",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 15, "start_month": 4, "end_day": 22, "end_month": 4 }
+  },
+  {
+    "key": "ulusal_egemenlik_ve_cocuk_bayrami",
+    "name": "Ulusal Egemenlik ve Çocuk Bayramı",
+    "description": "23 Nisan",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 23, "month": 4 }
+  },
+  {
+    "key": "dunya_fikri_mulkiyet_gunu",
+    "name": "26 Nisan Dünya Fikrî Mülkiyet Günü",
+    "description": "26 Nisan",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 26, "month": 4 }
+  },
+  {
+    "key": "kutul_amare_zaferi",
+    "name": "Kût’ül Amâre Zaferi",
+    "description": "29 Nisan",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 29, "month": 4 }
+  },
+  {
+    "key": "bilisim_haftasi",
+    "name": "Bilişim Haftası",
+    "description": "Mayıs ayının ilk haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 5, "nth": 1 }
+  },
+  {
+    "key": "trafik_ve_ilkyardim_haftasi",
+    "name": "Trafik ve İlkyardım Haftası",
+    "description": "Mayıs ayının ilk haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 5, "nth": 1 }
+  },
+  {
+    "key": "is_sagligi_guvenligi_haftasi",
+    "name": "İş Sağlığı ve Güvenliği Haftası",
+    "description": "4-10 Mayıs",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 4, "start_month": 5, "end_day": 10, "end_month": 5 }
+  },
+  {
+    "key": "vakiflar_haftasi",
+    "name": "Vakıflar Haftası",
+    "description": "Mayıs ayının 2. haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 5, "nth": 2 }
+  },
+  {
+    "key": "anneler_gunu",
+    "name": "Anneler Günü",
+    "description": "Mayıs ayının 2. Pazarı",
+    "calculation_type": "NTH_DAY_IN_MONTH",
+    "params": { "month": 5, "nth": 2, "day_of_week": 7 }
+  },
+  {
+    "key": "engelliler_haftasi",
+    "name": "Engelliler Haftası",
+    "description": "10-16 Mayıs",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 10, "start_month": 5, "end_day": 16, "end_month": 5 }
+  },
+  {
+    "key": "muzeler_haftasi",
+    "name": "Müzeler Haftası",
+    "description": "18-24 Mayıs",
+    "calculation_type": "FIXED_RANGE",
+    "params": { "start_day": 18, "start_month": 5, "end_day": 24, "end_month": 5 }
+  },
+  {
+    "key": "ataturku_anma_genclik_ve_spor_bayrami",
+    "name": "Atatürk'ü Anma ve Gençlik ve Spor Bayramı",
+    "description": "19 Mayıs",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 19, "month": 5 }
+  },
+  {
+    "key": "etik_gunu",
+    "name": "Etik Günü",
+    "description": "25 Mayıs",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 25, "month": 5 }
+  },
+  {
+    "key": "istanbulun_fethi",
+    "name": "İstanbul’un Fethi",
+    "description": "29 Mayıs",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 29, "month": 5 }
+  },
+  {
+    "key": "hayat_boyu_ogrenme_haftasi",
+    "name": "Hayat Boyu Öğrenme Haftası",
+    "description": "Haziran ayının ilk haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 6, "nth": 1 }
+  },
+  {
+    "key": "cevre_haftasi",
+    "name": "Çevre ve İklim Değişikliği Haftası",
+    "description": "Haziran ayının 2. haftası",
+    "calculation_type": "NTH_WEEK_IN_MONTH",
+    "params": { "month": 6, "nth": 2 }
+  },
+  {
+    "key": "babalar_gunu",
+    "name": "Babalar Günü",
+    "description": "Haziran ayının 3. pazarı",
+    "calculation_type": "NTH_DAY_IN_MONTH",
+    "params": { "month": 6, "nth": 3, "day_of_week": 7 }
+  },
+  {
+    "key": "zafer_bayrami",
+    "name": "Zafer Bayramı",
+    "description": "30 Ağustos",
+    "calculation_type": "FIXED_DATE",
+    "params": { "day": 30, "month": 8 }
+  } 
+]

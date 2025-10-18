@@ -44,6 +44,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
             <mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon>
             Yetki Listesi
           </h2>
+          <div class="perm-count">Toplam Yetki: {{ permissions.length }}</div>
         </div>
         <div class="table-container">
           <table mat-table [dataSource]="permissions" class="permissions-table">
@@ -90,8 +91,23 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     .table-card { border-radius: 12px; overflow: hidden; }
     .table-header { padding: 1.5rem; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
     .table-header h2 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #2c3e50; display: flex; align-items: center; gap: 0.5rem; }
+  .table-header .perm-count { font-weight: 600; color: rgba(0,0,0,0.75); }
     .table-container { overflow-x: auto; }
     .permissions-table { width: 100%; }
+
+    /* Aggressive condensed table: very small padding and compact row height */
+    .permissions-table .mat-header-cell, .permissions-table .mat-cell, .permissions-table th, .permissions-table td {
+      padding: 4px 16px !important;
+      font-size: 0.86rem;
+      line-height: 1.0;
+    }
+    .permissions-table tr.mat-row { height: 30px; }
+    .permissions-table tr.mat-row:hover { background: rgba(0,0,0,0.04); }
+    .permissions-table th.mat-header-cell { font-size: 0.88rem; padding: 6px 6px !important; }
+    /* Add extra left padding specifically to the permission name column */
+    .permissions-table .mat-cell.mat-column-name, .permissions-table .mat-header-cell.mat-column-name {
+      padding-left: 14px !important;
+    }
 
     .back-btn { background-color: #f8f9fa; color: #1976d2; border: 2px solid #e3f2fd; transition: all 0.3s ease; }
     .back-btn:hover { background-color: #e3f2fd; transform: scale(1.05); }

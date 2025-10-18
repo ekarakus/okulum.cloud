@@ -30,6 +30,10 @@ app.use('/api/auth', authRouter);
 // School route
 const schoolRouter = require('./routes/schoolRoutes');
 app.use('/api/schools', schoolRouter);
+// Ensure observances import endpoint is reachable (explicit mount)
+const schoolObservancesCtrl = require('./controllers/schoolObservancesController');
+const { authenticateToken, checkSchoolAccess } = require('./middleware/auth');
+app.post('/api/schools/:school_id/observances/import-from-json', authenticateToken, checkSchoolAccess, schoolObservancesCtrl.importFromJson);
 // Location dropdowns (provinces/districts) and uploads
 const locationRoutes = require('./routes/locationRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
@@ -113,6 +117,12 @@ app.use('/api/announcements', announcementRouter);
 // Students
 const studentRouter = require('./routes/studentRoutes');
 app.use('/api/students', studentRouter);
+
+// Info nugget categories & nuggets
+const infoNuggetCategoryRouter = require('./routes/infoNuggetCategories');
+app.use('/api/info-nugget-categories', infoNuggetCategoryRouter);
+const infoNuggetRouter = require('./routes/infoNuggets');
+app.use('/api/info-nuggets', infoNuggetRouter);
 
 // Report routes
 const reportRouter = require('./routes/report');

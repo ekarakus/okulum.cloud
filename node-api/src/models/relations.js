@@ -22,6 +22,9 @@ const DutyScheduleAssignment = require('./dutyScheduleAssignment');
 const Announcement = require('./announcement');
 const AnnouncementAttachment = require('./announcementAttachment');
 const Student = require('./student');
+const InfoNuggetCategory = require('./infoNuggetCategory');
+const InfoNugget = require('./infoNugget');
+const SchoolObservance = require('./schoolObservance');
 
 // İlişkiler
 Location.hasMany(Device, { foreignKey: 'location_id', as: 'Location' });
@@ -123,6 +126,14 @@ DutySchedule.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 School.hasMany(Announcement, { foreignKey: 'school_id', as: 'Announcements' });
 Announcement.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 
+// Info Nuggets
+InfoNuggetCategory.hasMany(InfoNugget, { foreignKey: 'category_id', as: 'InfoNuggets' });
+InfoNugget.belongsTo(InfoNuggetCategory, { foreignKey: 'category_id', as: 'Category' });
+
+// School observances
+School.hasMany(SchoolObservance, { foreignKey: 'school_id', as: 'Observances' });
+SchoolObservance.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
+
 // Attachments
 Announcement.hasMany(AnnouncementAttachment, { foreignKey: 'announcement_id', as: 'Attachments' });
 AnnouncementAttachment.belongsTo(Announcement, { foreignKey: 'announcement_id', as: 'Announcement' });
@@ -161,5 +172,8 @@ module.exports = {
   DutyScheduleAssignment,
   Announcement,
   AnnouncementAttachment,
+  InfoNuggetCategory,
+  InfoNugget,
   Student,
+  SchoolObservance,
 };

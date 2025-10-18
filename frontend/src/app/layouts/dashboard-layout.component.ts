@@ -26,7 +26,7 @@ import { filter } from 'rxjs/operators';
       <mat-toolbar color="primary" class="toolbar-content">
         <div class="brand">
           <span class="material-symbols-outlined icon icon-school" aria-hidden="true">school</span>
-          <span>Okul Bilgisayar Bakım Sistemi</span>
+          <span>okulum.cloud bilgi sistemi</span>
         </div>
         <div class="toolbar-right" *ngIf="isLoggedIn()">
           <div class="nav-buttons">
@@ -36,6 +36,7 @@ import { filter } from 'rxjs/operators';
               </svg>
               <span>Ana Sayfa</span>
             </button>
+
             <!-- Okul Seçici -->
             <div *ngIf="shouldShowSchoolSelector()" class="school-selector-toolbar">
               <mat-form-field appearance="outline">

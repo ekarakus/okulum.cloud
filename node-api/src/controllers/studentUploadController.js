@@ -61,12 +61,14 @@ exports.upload = async (req, res) => {
       if (!first_name) rowErrs.push('Adı boş');
       if (!last_name) rowErrs.push('Soyadı boş');
   if (class_name && class_name.length > 10) rowErrs.push('SINIF alanı maksimum 10 karakter olmalıdır');
-      // Accept Turkish date formats: gg/aa/YYYY or gg-aa-YYYY
+      // Accept Turkish date formats: gg/aa/YYYY, gg-aa-YYYY or gg.aa.YYYY
       let normalizedBirthDate = null;
       if (birth_date) {
-        const trMatch = birth_date.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
+        // allow separators: / or - or .
+        const trMatch = birth_date.match(/^(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})$/);
         if (!trMatch) {
-          rowErrs.push('Doğum tarihi gg/aa/YYYY veya gg-aa-YYYY formatında olmalıdır');
+          // include the raw cell value in the error to make it clear what failed
+          rowErrs.push(`Doğum tarihi gg/aa/YYYY, gg-aa-YYYY veya gg.aa.YYYY formatında olmalıdır (girdi: "${birth_date}")`);
         } else {
           const day = Number(trMatch[1]);
           const month = Number(trMatch[2]);

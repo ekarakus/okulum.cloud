@@ -60,7 +60,8 @@ const checkSchoolAccess = async (req, res, next) => {
       return next();
     }
 
-    const schoolId = req.params.schoolId || req.body.school_id || req.query.school_id;
+  // Accept both camelCase and snake_case param names (routes may use :id, :schoolId or :school_id)
+  const schoolId = req.params.schoolId || req.params.school_id || req.params.id || req.body.school_id || req.query.school_id;
     
     if (!schoolId) {
       return res.status(400).json({ message: 'Okul ID gerekli' });
