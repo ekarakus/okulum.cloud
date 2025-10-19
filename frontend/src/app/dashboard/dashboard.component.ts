@@ -28,6 +28,17 @@ import { apiBase } from '../runtime-config';
             <span class="material-symbols-outlined action-icon" aria-hidden="true">people</span>
             Personel Yönetimi
           </button>
+          <button mat-raised-button routerLink="/students" class="action-btn students-btn">
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">people_alt</span>
+            Öğrenciler
+          </button>
+        </div>
+      </div>
+
+      <!-- Ekran İşlemleri: move remaining okul işlemleri buttons here -->
+      <div class="screen-ops-section" style="margin-top:0;">
+        <h2 class="section-title">🖥️ Ekran İşlemleri</h2>
+        <div class="actions-grid">
           <button mat-raised-button routerLink="/duty-locations" class="action-btn duty-btn">
             <span class="material-symbols-outlined action-icon" aria-hidden="true">place</span>
             Nöbet Yerleri
@@ -48,10 +59,6 @@ import { apiBase } from '../runtime-config';
             <span class="material-symbols-outlined action-icon" aria-hidden="true">info</span>
             Bilgi Kartları
           </button>
-          <button mat-raised-button routerLink="/students" class="action-btn students-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">people_alt</span>
-            Öğrenciler
-          </button>
           <button mat-raised-button routerLink="/observances" class="action-btn observances-btn">
             <span class="material-symbols-outlined action-icon" aria-hidden="true">event</span>
             Belirli Gün ve Haftalar
@@ -64,7 +71,7 @@ import { apiBase } from '../runtime-config';
         <h2 class="section-title">🚀 Demirbaş</h2>
         <div class="actions-grid">
           <button mat-raised-button color="primary" routerLink="/devices" class="action-btn primary-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">computer</span>
+            <span class="material-symbols-outlined action-icon" aria-hidden="true">devices</span>
             Demirbaşlar
           </button>
           <button mat-raised-button color="accent" routerLink="/operations" class="action-btn accent-btn">
@@ -156,7 +163,7 @@ import { apiBase } from '../runtime-config';
           <mat-card class="main-stat-card device-card" (click)="navigateTo('/devices')">
             <div class="main-stat-content">
               <div class="main-stat-icon-wrapper">
-                <span class="material-symbols-rounded main-stat-icon" aria-hidden="true">computer</span>
+                <span class="material-symbols-rounded main-stat-icon" aria-hidden="true">devices</span>
                 <div class="icon-bg device-bg"></div>
               </div>
               <div class="main-stat-text">
@@ -275,14 +282,14 @@ import { apiBase } from '../runtime-config';
           <!-- Sol Sütun - Son İşlem Yapılan Demirbaşlar -->
           <mat-card class="quick-ops-card">
             <mat-card-header>
-              <span class="material-symbols-outlined card-icon">computer</span>
+              <span class="material-symbols-outlined card-icon">devices</span>
               <mat-card-title>Son 4 İşlem Yapılan Demirbaş</mat-card-title>
             </mat-card-header>
             <mat-card-content>
               <div class="ops-list">
                 <div *ngFor="let device of recentDevices" class="ops-item" (click)="navigateTo('/device-detail/' + device.id)">
                   <div class="ops-icon">
-                    <span class="material-symbols-outlined">computer</span>
+                    <span class="material-symbols-outlined">devices</span>
                   </div>
                   <div class="ops-content">
                     <div class="ops-title">{{ device.name }}</div>

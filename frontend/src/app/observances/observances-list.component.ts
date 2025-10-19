@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -103,8 +103,8 @@ import { FormsModule } from '@angular/forms';
                   <mat-checkbox (change)="$event ? toggleSelect(row.id, $event.checked) : null" [checked]="selectedIds.has(row.id)"></mat-checkbox>
                 </td>
                 <td style="padding: 8px;">{{ row.name }}</td>
-                <td style="padding: 8px;">{{ row.start_date ? (row.start_date | date:'yyyy-MM-dd') : '-' }}</td>
-                <td style="padding: 8px;">{{ row.end_date ? (row.end_date | date:'yyyy-MM-dd') : '-' }}</td>
+                <td style="padding: 8px;">{{ row.start_date ? (row.start_date | date:'dd-MM-yyyy') : '-' }}</td>
+                <td style="padding: 8px;">{{ row.end_date ? (row.end_date | date:'dd-MM-yyyy') : '-' }}</td>
                 <td style="padding: 8px;">
                   <button mat-button (click)="onEdit(row)"><mat-icon fontSet="material-symbols-outlined">edit</mat-icon> Düzenle</button>
                 </td>
@@ -190,13 +190,9 @@ export class ObservancesListComponent implements OnInit, OnDestroy {
   private searchSubject: Subject<string> = new Subject<string>();
   // a hidden button to focus when we want to force keyboard/focus update after list refresh
   @ViewChild('refreshTrigger', { read: ElementRef }) refreshTrigger?: ElementRef;
-  constructor(private router: Router, private snack: MatSnackBar, private obsSvc: ObservanceService, private auth: AuthService, private dialog: MatDialog, private cdr: ChangeDetectorRef) {
-    const now = new Date();
-    const thisYear = now.getFullYear();
-    // offer a small window of years
-    this.yearOptions = [thisYear-1, thisYear, thisYear+1];
-    // default to current calendar year (middle option) so imported MEB takvimi for current year is visible
-    this.selectedYear = this.yearOptions[1];
+  constructor(private router: Router, private snack: MatSnackBar, private obsSvc: ObservanceService, private auth: AuthService, private dialog: MatDialog, private cdr: ChangeDetectorRef, private ngZone: NgZone) {
+    // initialize year options (current year, next year)
+    this.updateYearOptions(false);
   }
   ngOnInit(): void {
     // Subscribe to selectedSchool changes so the list reloads whenever the user selects a school
@@ -223,9 +219,22 @@ export class ObservancesListComponent implements OnInit, OnDestroy {
       const school = await this.getOrSelectSchool();
       if (school) {
         this.page = 1;
-        this.loadList();
+        await this.loadList();
       }
     })();
+  }
+
+  private updateYearOptions(preserveSelected: boolean) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const opts = [y, y + 1];
+    this.yearOptions = opts;
+    if (preserveSelected && this.selectedYear && opts.includes(this.selectedYear)) {
+      // keep current selection
+      return;
+    }
+    // default to current year
+    this.selectedYear = opts[0];
   }
 
   ngOnDestroy(): void {
@@ -245,10 +254,10 @@ export class ObservancesListComponent implements OnInit, OnDestroy {
     const schoolId = school.id;
     const year = this.selectedYear || undefined;
     this.isLoading = true;
-    this.obsSvc.importStandardObservances(schoolId, year).subscribe({ next: (res:any) => {
+    this.obsSvc.importStandardObservances(schoolId, year).subscribe({ next: async (res:any) => {
       this.isLoading = false;
       this.snack.open('Takvim başarıyla yüklendi!', 'Kapat', { duration: 3000 });
-      this.loadList();
+      try { await this.loadList(); } catch(e) { console.error('refresh after import failed', e); }
     }, error: (err) => {
       this.isLoading = false;
       console.error('import error', err);
@@ -259,28 +268,36 @@ export class ObservancesListComponent implements OnInit, OnDestroy {
   }
 
   // load list
-  async loadList() {
+  async loadList(): Promise<void> {
+    // refresh year options each time we load the list so options are always current
+    this.updateYearOptions(true);
     // Use getOrSelectSchool for initial selection fallback, but prefer selectedSchool$ subscription for changes.
     const school = this.auth.getSelectedSchool() || await this.getOrSelectSchool();
     if (!school) return;
     this.isLoading = true;
-    this.obsSvc.list(school.id, this.page, this.pageSize, this.sortBy, this.sortDir, this.selectedYear || undefined, this.searchText || undefined).subscribe({ next: (res:any) => {
-      this.isLoading = false;
-      this.data = res.data || res;
-      // clear selection after reload
-      try { this.selectedIds.clear(); } catch(e) {}
-      this.total = res.total || (this.data||[]).length;
-      this.totalPages = Math.max(1, Math.ceil((this.total || 0) / this.pageSize));
-      // ensure Angular updates and optionally focus hidden trigger to wake UI focus if needed
-      try {
-        this.cdr.detectChanges();
-        if (this.refreshTrigger && this.refreshTrigger.nativeElement && typeof this.refreshTrigger.nativeElement.focus === 'function') {
-          this.refreshTrigger.nativeElement.focus();
-        }
-      } catch(e) { /* ignore */ }
-    }, error: (err) => {
-      this.isLoading = false; console.error(err); this.snack.open('Listeleme hatası', 'Kapat');
-    }});
+    return new Promise<void>((resolve, reject) => {
+      this.obsSvc.list(school.id, this.page, this.pageSize, this.sortBy, this.sortDir, this.selectedYear || undefined, this.searchText || undefined).subscribe({ next: (res:any) => {
+        this.isLoading = false;
+        this.data = res.data || res;
+        // clear selection after reload
+        try { this.selectedIds.clear(); } catch(e) {}
+        this.total = res.total || (this.data||[]).length;
+        this.totalPages = Math.max(1, Math.ceil((this.total || 0) / this.pageSize));
+        // ensure Angular updates and optionally focus hidden trigger to wake UI focus if needed
+        try {
+          this.ngZone.run(() => {
+            this.cdr.detectChanges();
+            if (this.refreshTrigger && this.refreshTrigger.nativeElement && typeof this.refreshTrigger.nativeElement.focus === 'function') {
+              this.refreshTrigger.nativeElement.focus();
+            }
+          });
+        } catch(e) { /* ignore */ }
+        resolve();
+      }, error: (err) => {
+        this.isLoading = false; console.error(err); this.snack.open('Listeleme hatası', 'Kapat');
+        reject(err);
+      }});
+    });
   }
 
   async onCreate(): Promise<void> {
@@ -289,7 +306,7 @@ export class ObservancesListComponent implements OnInit, OnDestroy {
     const ref = this.dialog.open(ObservanceFormDialogComponent, { data: { source_year: this.selectedYear } });
     ref.afterClosed().subscribe((res:any) => {
       if (!res) return;
-      this.obsSvc.createObservance(school.id, res).subscribe({ next: _ => { this.snack.open('Oluşturuldu','Kapat'); this.loadList(); }, error: e=>{console.error(e); this.snack.open('Oluşturma hatası','Kapat'); } });
+      this.obsSvc.createObservance(school.id, res).subscribe({ next: async _ => { this.snack.open('Oluşturuldu','Kapat'); try { await this.loadList(); } catch(e){} }, error: e=>{console.error(e); this.snack.open('Oluşturma hatası','Kapat'); } });
     });
   }
 
@@ -299,7 +316,7 @@ export class ObservancesListComponent implements OnInit, OnDestroy {
     const ref = this.dialog.open(ObservanceFormDialogComponent, { data: row });
     ref.afterClosed().subscribe((res:any) => {
       if (!res) return;
-      this.obsSvc.updateObservance(school.id, row.id, res).subscribe({ next: _ => { this.snack.open('Güncellendi','Kapat'); this.loadList(); }, error: e=>{console.error(e); this.snack.open('Güncelleme hatası','Kapat'); } });
+      this.obsSvc.updateObservance(school.id, row.id, res).subscribe({ next: async _ => { this.snack.open('Güncellendi','Kapat'); try { await this.loadList(); } catch(e){} }, error: e=>{console.error(e); this.snack.open('Güncelleme hatası','Kapat'); } });
     });
   }
 
@@ -318,7 +335,7 @@ export class ObservancesListComponent implements OnInit, OnDestroy {
     if (!confirm(`Seçili ${this.selectedIds.size} kaydı silmek istediğinizden emin misiniz?`)) return;
     const school = await this.getOrSelectSchool(); if (!school) return;
   const ids = Array.from(this.selectedIds);
-  this.obsSvc.bulkDeleteObservances(school.id, ids).subscribe({ next: (res:any) => { this.snack.open(`Seçili ${res.deleted||ids.length} kayıt silindi`,'Kapat'); this.selectedIds.clear(); this.loadList(); }, error: e=>{ console.error(e); this.snack.open('Silme hatası','Kapat'); } });
+  this.obsSvc.bulkDeleteObservances(school.id, ids).subscribe({ next: async (res:any) => { this.snack.open(`Seçili ${res.deleted||ids.length} kayıt silindi`,'Kapat'); this.selectedIds.clear(); try { await this.loadList(); } catch(e){} }, error: e=>{ console.error(e); this.snack.open('Silme hatası','Kapat'); } });
   }
 
   onPage(event: any) {

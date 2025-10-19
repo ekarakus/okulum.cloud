@@ -13,10 +13,31 @@ function getCurrentEduYear(now = new Date()) {
 function pad(n) { return n.toString().padStart(2, '0'); }
 function toIsoDate(y, m, d) { return `${y}-${pad(m)}-${pad(d)}`; }
 
-// convert dayOfWeek string to 0-6 (Sun-Sat)
-const dayNameToIndex = (name) => {
+// convert dayOfWeek input to 0-6 (Sun-Sat)
+// Accepts:
+//  - numeric 0-6 (JS style, Sunday=0)
+//  - numeric 1-7 (Monday=1 or Sunday=7 depending on source; we treat 1=Monday..7=Sunday by converting)
+//  - string weekday name like 'saturday' (case-insensitive)
+const dayNameToIndex = (v) => {
+  if (v === null || v === undefined) return null;
+  // numeric values
+  if (typeof v === 'number' && Number.isInteger(v)) {
+    // if 0-6 assume JS dayOfWeek
+    if (v >= 0 && v <= 6) return v;
+    // if 1-7 treat 1=Monday..7=Sunday -> convert to 0-6 (Sunday=0)
+    if (v >= 1 && v <= 7) return (v % 7); // Monday(1)->1 .. Sunday(7)->0
+  }
+  // numeric string? try parse
+  const asNum = parseInt(v, 10);
+  if (!isNaN(asNum)) {
+    if (asNum >= 0 && asNum <= 6) return asNum;
+    if (asNum >= 1 && asNum <= 7) return (asNum % 7);
+  }
+  // string names
   const map = { sunday:0, monday:1, tuesday:2, wednesday:3, thursday:4, friday:5, saturday:6 };
-  return map[(name||'').toString().trim().toLowerCase()] ?? null;
+  const key = ('' + v).toString().trim().toLowerCase();
+  if (map.hasOwnProperty(key)) return map[key];
+  return null;
 };
 
 // DateCalculatorService

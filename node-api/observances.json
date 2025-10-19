@@ -62,13 +62,7 @@
     "calculation_type": "NTH_DAY_IN_MONTH",
     "params": { "month": 10, "nth": 1, "day_of_week": 4 }
   },
-  {
-    "key": "mevlid_i_nebi_haftasi",
-    "name": "Mevlid-i Nebî Haftası",
-    "description": "Diyanet İşleri Başkanlığınca belirlenecek haftada",
-    "calculation_type": "MANUAL",
-    "params": {}
-  },
+  
   {
     "key": "hayvanlari_koruma_gunu",
     "name": "Hayvanları Koruma Günü",
