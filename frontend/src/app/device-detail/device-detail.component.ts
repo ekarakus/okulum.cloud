@@ -59,7 +59,7 @@ import { environment } from '../../environments/environment';
               </div>
               <div class="info-row">
                 <span class="label">Kullanıcı:</span>
-                <span class="value">{{ device?.user || '-' }}</span>
+                <span class="value">{{ device?.AssignedEmployee?.name || device?.user || '-' }}</span>
               </div>
               <div class="info-row">
                 <span class="label">Durum:</span>

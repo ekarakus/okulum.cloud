@@ -157,6 +157,13 @@ export const routes: Routes = [
         loadComponent: () => import('./report-preview/report-preview.component').then(m => m.ReportPreviewComponent),
         data: { requiresSchool: true }
       }
+      ,
+      // Redirect for plain /reports (sidebar links may point to this)
+      {
+        path: 'reports',
+        redirectTo: 'reports/preview',
+        pathMatch: 'full'
+      }
     ]
   },
 

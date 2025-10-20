@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { OperationAddEditDialogComponent } from '../operation-add-edit-dialog/operation-add-edit-dialog.component';
@@ -14,7 +15,7 @@ import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-operation-list',
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatDialogModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatDialogModule, MatIconModule, MatProgressSpinnerModule],
   providers: [DatePipe],
   host: { 'ngSkipHydration': '' },
   template: `
@@ -83,13 +84,16 @@ import { AuthService } from '../services/auth.service';
 
       <!-- Operations Table -->
       <mat-card class="table-card">
+        <div *ngIf="isLoading" class="loading-overlay">
+          <div class="spinner-wrap"><mat-progress-spinner mode="indeterminate" diameter="60" color="primary"></mat-progress-spinner></div>
+        </div>
         <div class="table-header">
           <h2>
             <mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon>
             İşlem Listesi
           </h2>
         </div>
-        <div class="table-container">
+  <div class="table-container">
           <table style="width:100%; border-collapse: collapse;">
           <thead>
             <tr style="background-color: #f5f5f5;">
@@ -167,7 +171,9 @@ import { AuthService } from '../services/auth.service';
     .header h1 { margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.8rem; font-weight: 600; color: #2c3e50; }
     .header h1 mat-icon { font-size: 2rem; width: 2rem; height: 2rem; color: #1976d2; }
 
-    .table-card { border-radius: 12px; overflow: hidden; }
+  .table-card { border-radius: 12px; overflow: hidden; position: relative; }
+  .loading-overlay { position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.75); z-index: 20; pointer-events: none; }
+  .loading-overlay .spinner-wrap { pointer-events: auto; z-index: 21; }
     .table-header { padding: 1.5rem; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
     .table-header h2 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #2c3e50; display: flex; align-items: center; gap: 0.5rem; }
     .table-container { overflow-x: auto; }
@@ -202,6 +208,7 @@ export class OperationListComponent implements OnInit {
   operations: any[] = [];
   filteredOperations: any[] = [];
   pagedOperations: any[] = [];
+  isLoading: boolean = false;
   pageIndex = 0;
   pageSize = 20;
   totalPages = 0;
@@ -238,10 +245,12 @@ export class OperationListComponent implements OnInit {
         this.operations = [];
         this.devices = [];
         this.technicians = [];
+        this.isLoading = false;
         return;
       }
 
       // Okul seçildiyse önce ilişkili verileri (cihaz, tür, teknisyen) yükle ardından işlemleri getir
+      this.isLoading = true;
       this.loadRelatedData(() => this.loadOperations());
     });
   }
@@ -255,11 +264,13 @@ export class OperationListComponent implements OnInit {
 
   private loadOperations() {
     const token = this.getToken();
+    // Always set loading true when starting an explicit operations load so the UI shows the spinner
+    this.isLoading = true;
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
       // Okul filtresi ekle - SÜPER ADMİN DAHİL HERKES SEÇİLİ OKULA GÖRE FİLTRELENECEK
-  let url = `${apiBase}/api/operations`;
+      let url = `${apiBase}/api/operations`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }
@@ -269,10 +280,20 @@ export class OperationListComponent implements OnInit {
           this.operations = data;
           this.loadSortFromStorage();
           this.applyFilters();
+          // Clear loading flag first, then run change detection so template updates immediately
+          this.isLoading = false;
           this.cdr.detectChanges();
         },
-        error: err => console.error('Error loading operations:', err)
+        error: err => {
+          console.error('Error loading operations:', err);
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
       });
+    } else {
+      // No token available: ensure spinner is cleared to avoid stuck loading state
+      this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -288,13 +309,13 @@ export class OperationListComponent implements OnInit {
       }
       this.http.get<any[]>(devicesUrl, { headers }).subscribe({
         next: data => { this.devices = data; this.cdr.detectChanges(); },
-        error: err => console.error('Error loading devices:', err)
+        error: err => { console.error('Error loading devices:', err); }
       });
 
       // Load operation types from API
-  this.http.get<any[]>(`${apiBase}/api/operation-types`, { headers }).subscribe({
+      this.http.get<any[]>(`${apiBase}/api/operation-types`, { headers }).subscribe({
         next: data => { this.operationTypes = data; this.cdr.detectChanges(); },
-        error: err => console.error('Error loading operation types:', err)
+        error: err => { console.error('Error loading operation types:', err); }
       });
 
       // Load technicians filtered by selected school

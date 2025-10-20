@@ -61,9 +61,7 @@ import { filter } from 'rxjs/operators';
             <!-- Çıkış burada olmayacak; sadece toolbar'daki tek buton kullanılacak -->
           </mat-menu>
           <button mat-button class="logout-btn" (click)="logout()" matTooltip="Çıkış Yap">
-            <svg class="icon icon-logout" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" fill="currentColor"/>
-            </svg>
+            <mat-icon fontSet="material-symbols-outlined" class="icon icon-logout" aria-hidden>logout</mat-icon>
             <span class="logout-text">Çıkış</span>
           </button>
         </div>
@@ -89,7 +87,18 @@ import { filter } from 'rxjs/operators';
   .user-menu-header .role { font-size:11px; opacity:.75; }
   .logout-btn { display:flex; align-items:center; gap:.35rem; border-radius:20px; }
   .logout-btn .logout-text { font-weight:500; }
-  @media (max-width: 900px) { .logout-btn .logout-text { display:none; } }
+  /* Keep the logout icon visible on narrow screens; only hide the text label */
+  @media (max-width: 900px) {
+    .logout-btn .logout-text { display:none; }
+    .logout-btn { min-width:40px; padding:0.35rem; }
+    .logout-btn .icon-logout { width:18px; height:18px; }
+  }
+  /* On very small screens ensure toolbar right area doesn't collapse and the logout remains tappable */
+  @media (max-width: 480px) {
+    .toolbar-right { gap: 0.4rem; }
+    .logout-btn { display:flex !important; background: rgba(255,255,255,0.06); }
+    .logout-btn:hover { background: rgba(255,255,255,0.12); }
+  }
     .nav-buttons button { display: flex; align-items: center; gap: 0.5rem; transition: background-color 0.3s ease; border-radius: 8px; padding: 0.5rem 1rem; }
     .nav-buttons button:hover { background-color: rgba(255, 255, 255, 0.1); }
     .nav-buttons .active-link { background-color: rgba(0, 0, 0, 0.15); font-weight: 500; }

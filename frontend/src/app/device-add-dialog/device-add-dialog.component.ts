@@ -3,10 +3,15 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray, FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { FeatureService, Feature } from '../services/feature.service';
+import { SchoolEmployeeService } from '../services/school-employee.service';
+import { Observable, of } from 'rxjs';
+import { map, startWith, switchMap } from 'rxjs/operators';
+import { AuthService } from '../services/auth.service';
 import { MatIconModule } from '@angular/material/icon';
 import { FilterDeviceTypePipe } from '../pipes/filter-device-type.pipe';
 import { FilterLocationPipe } from '../pipes/filter-location.pipe';
@@ -21,6 +26,7 @@ import { FilterFeaturePipe } from '../pipes/filter-feature.pipe';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    MatAutocompleteModule,
     MatButtonModule,
     ReactiveFormsModule,
     FormsModule,
@@ -50,8 +56,15 @@ import { FilterFeaturePipe } from '../pipes/filter-feature.pipe';
 
 
         <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;">
-          <mat-label>Kullanıcı</mat-label>
-          <input matInput formControlName="user" />
+          <mat-label>Kullanıcı (isteğe bağlı)</mat-label>
+          <!-- This input supports: empty, free text, or selecting an employee from the list -->
+          <input type="text" matInput formControlName="user" [matAutocomplete]="auto" placeholder="Personel seçin veya serbest metin girin" />
+          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onEmployeeSelected($event.option.value)">
+            <mat-option *ngFor="let emp of filteredEmployees | async" [value]="emp">
+              {{ emp.name }} <span *ngIf="emp.title"> — {{ emp.title }}</span>
+            </mat-option>
+          </mat-autocomplete>
+          <mat-hint>Seçim zorunlu değildir; boş bırakabilir veya serbest metin yaz.</mat-hint>
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width:100%; margin-bottom: 1rem;">
@@ -160,11 +173,16 @@ export class DeviceAddDialogComponent implements OnInit {
   deviceTypeFilter: string = '';
   locationFilter: string = '';
   featureFilter: string = '';
+  // employees for autocomplete
+  employees: any[] = [];
+  filteredEmployees!: Observable<any[]>;
 
   constructor(
     private fb: FormBuilder,
     private featureService: FeatureService,
     private cdr: ChangeDetectorRef,
+    private empSvc: SchoolEmployeeService,
+    private auth: AuthService,
     public dialogRef: MatDialogRef<DeviceAddDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { locations: any[], deviceTypes: any[], device?: any, isEdit?: boolean }
   ) {
@@ -206,6 +224,37 @@ export class DeviceAddDialogComponent implements OnInit {
     setTimeout(() => {
       this.loadFeatures();
     }, 0);
+
+    // Setup filteredEmployees observable according to the current selected school
+    this.filteredEmployees = this.form.get('user')!.valueChanges.pipe(
+      startWith(''),
+      switchMap(val => {
+        const q = (typeof val === 'string' ? val : (val?.name || '')) || '';
+        if (!q && this.employees.length === 0) {
+          // load employees for the selected school once if not loaded
+          this.loadEmployeesForSelectedSchool();
+        }
+        const list = this.employees || [];
+        const filtered = list.filter(e => (e.name || '').toLowerCase().includes(q.toLowerCase()));
+        return of(filtered.slice(0, 50));
+      })
+    );
+  }
+
+  private loadEmployeesForSelectedSchool() {
+    // prefer to read selected school from AuthService
+    this.auth.selectedSchool$.pipe(startWith(null)).subscribe(s => {
+      const schoolId = s?.id ?? null;
+      if (!schoolId) return;
+      this.empSvc.listBySchool(schoolId).subscribe({ next: (list: any) => { this.employees = (list as any[]) || []; this.cdr.detectChanges(); }, error: () => {} });
+    });
+  }
+
+  onEmployeeSelected(emp: any) {
+    // When an employee is selected, set the form 'user' to the employee's name (string) but also attach a hidden user_id in the form value
+    this.form.patchValue({ user: emp.name });
+    // store selected id in a hidden control or as part of payload — easiest: attach to form via setValue change, but not as a FormControl
+    (this.form as any)._selectedUserId = emp.id;
   }
 
   onFormEnter(event: Event) {
@@ -314,6 +363,9 @@ export class DeviceAddDialogComponent implements OnInit {
       ...raw,
       selectedFeatures
     };
+    // If we attached a selected employee id earlier, include it explicitly so backend can set user_id
+    const selId = (this.form as any)._selectedUserId || null;
+    if (selId) (payload as any).user_id = selId;
     delete (payload as any).featurePairs;
     this.dialogRef.close(payload);
   }

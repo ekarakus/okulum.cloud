@@ -84,10 +84,19 @@ import { Subscription } from 'rxjs';
       <div style="font-size:1rem;color:#666">Bu okul için kayıtlı öğrenci bulunamadı.</div>
     </mat-card>
 
-    <div *ngIf="loading" style="display:flex;justify-content:center;padding:2rem">
-      <mat-progress-spinner mode="indeterminate" diameter="36" aria-label="Öğrenciler yükleniyor"></mat-progress-spinner>
-    </div>
+    <div class="table-card">
+      <div *ngIf="loading" class="loading-overlay">
+        <mat-progress-spinner mode="indeterminate" diameter="60" aria-label="Öğrenciler yükleniyor"></mat-progress-spinner>
+      </div>
 
+      <div class="table-header">
+        <h2>
+          <mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon>
+          Öğrenci Listesi
+        </h2>
+      </div>
+
+      <div class="table-container">
       <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8" style="width:100%">
 
         <!-- Select Column -->
@@ -148,7 +157,8 @@ import { Subscription } from 'rxjs';
         </tr>
       </table>
 
-      <mat-paginator [pageSizeOptions]="[10,25,50]" showFirstLastButtons></mat-paginator>
+  </div>
+  <mat-paginator [pageSizeOptions]="[10,25,50]" showFirstLastButtons></mat-paginator>
   </div>
   `
   ,
@@ -158,7 +168,14 @@ import { Subscription } from 'rxjs';
     .header-left { display: flex; align-items: center; gap: 1rem; }
     .header h1 { margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.6rem; font-weight: 600; color: #2c3e50; }
     .header h1 mat-icon { font-size: 1.6rem; color: #1976d2; }
-    .table-card { border-radius: 12px; overflow: hidden; }
+  .table-card { border-radius: 12px; overflow: hidden; position: relative; }
+  .loading-overlay { position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.75); z-index: 20; }
+  .table-header { padding: 1.5rem; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+  .table-header h2 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #2c3e50; display: flex; align-items: center; gap: 0.5rem; }
+  .table-container { overflow-x: auto; }
+  /* Table header row styling */
+  .table-container table thead tr { background-color: #f5f5f5; }
+  .table-container th.mat-header-cell, .table-container thead th { padding: 6px 12px; text-align: left; border-bottom: 1px solid #ddd; }
     .back-btn { background-color: #f8f9fa; color: #1976d2; border: 2px solid #e3f2fd; transition: all 0.3s ease; }
     .back-btn:hover { background-color: #e3f2fd; transform: scale(1.05); }
   .add-btn { padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 500; background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%); color: white; box-shadow: 0 2px 8px rgba(25,118,210,0.25); }

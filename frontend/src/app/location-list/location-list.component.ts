@@ -13,11 +13,14 @@ import { environment } from '../../environments/environment';
 import { LocationAddEditDialogComponent } from '../location-add-edit-dialog/location-add-edit-dialog.component';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-location-list',
-  imports: [CommonModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatDialogModule, ReactiveFormsModule, MatIconModule],
+  standalone: true,
+  imports: [CommonModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatDialogModule, ReactiveFormsModule, MatIconModule, MatSelectModule, MatProgressSpinnerModule],
   host: { 'ngSkipHydration': '' },
   template: `
     <div class="container">
@@ -40,11 +43,17 @@ import { AuthService } from '../services/auth.service';
 
       <!-- Locations Table -->
       <mat-card class="table-card">
+        <div *ngIf="isLoading" class="loading-overlay">
+          <div class="spinner-wrap"><mat-progress-spinner mode="indeterminate" diameter="60" color="primary"></mat-progress-spinner></div>
+        </div>
         <div class="table-header">
           <h2>
             <mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon>
             Lokasyon Listesi
           </h2>
+          <div class="list-stats" *ngIf="locations">
+            Gösterilen: {{pagedLocations.length}} / Toplam: {{locations.length}} kayıt
+          </div>
         </div>
         <div class="table-container">
           <table style="width:100%; border-collapse: collapse;">
@@ -92,15 +101,28 @@ import { AuthService } from '../services/auth.service';
 
         <!-- Pagination Controls -->
         <div class="pagination-controls">
-          <button mat-button (click)="prevPage()" [disabled]="pageIndex === 0">
-            <mat-icon>chevron_left</mat-icon>
-            Önceki
-          </button>
-          <span class="page-info">Sayfa {{pageIndex + 1}} / {{totalPages}}</span>
-          <button mat-button (click)="nextPage()" [disabled]="pageIndex === totalPages - 1">
-            Sonraki
-            <mat-icon>chevron_right</mat-icon>
-          </button>
+          <div style="display:flex; align-items:center; gap:1rem;">
+            <button mat-button (click)="prevPage()" [disabled]="pageIndex === 0">
+              <mat-icon fontSet="material-symbols-outlined">chevron_left</mat-icon>
+              Önceki
+            </button>
+            <span class="page-info">Sayfa {{pageIndex + 1}} / {{totalPages}}</span>
+            <button mat-button (click)="nextPage()" [disabled]="pageIndex === totalPages - 1">
+              Sonraki
+              <mat-icon fontSet="material-symbols-outlined">chevron_right</mat-icon>
+            </button>
+          </div>
+
+          <!-- Page size selector -->
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <label style="color:#666; font-size:0.9rem;">Göster</label>
+            <mat-form-field appearance="outline" style="width:110px; margin:0;">
+              <mat-select [value]="pageSize" (selectionChange)="onPageSizeChange($event.value)">
+                <mat-option [value]="25">25</mat-option>
+                <mat-option [value]="50">50</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
         </div>
       </mat-card>
     </div>
@@ -112,9 +134,13 @@ import { AuthService } from '../services/auth.service';
     .header h1 { margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.8rem; font-weight: 600; color: #2c3e50; }
     .header h1 mat-icon { font-size: 2rem; width: 2rem; height: 2rem; color: #1976d2; }
 
-    .table-card { border-radius: 12px; overflow: hidden; }
+  .table-card { border-radius: 12px; overflow: hidden; }
+  .table-card { border-radius: 12px; overflow: hidden; position: relative; }
+  .loading-overlay { position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.75); z-index: 20; pointer-events: none; }
+  .loading-overlay .spinner-wrap { pointer-events: auto; z-index: 21; }
     .table-header { padding: 1.5rem; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
     .table-header h2 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #2c3e50; display: flex; align-items: center; gap: 0.5rem; }
+  .list-stats { color: #666; font-size: 0.95rem; align-self: center; }
     .table-container { overflow-x: auto; }
 
     .back-btn { background-color: #f8f9fa; color: #1976d2; border: 2px solid #e3f2fd; transition: all 0.3s ease; }
@@ -134,12 +160,13 @@ import { AuthService } from '../services/auth.service';
 export class LocationListComponent implements OnInit, AfterViewInit {
   locations: any[] = [];
   selectedSchool: any = null;
+  isLoading: boolean = false;
   // Sorting state
   sort: { field: string | null, dir: 'asc' | 'desc' } = { field: null, dir: 'asc' };
   // Pagination
   pagedLocations: any[] = [];
   pageIndex = 0;
-  pageSize = 20;
+    pageSize = 25;
   totalPages = 0;
 
   constructor(
@@ -170,10 +197,12 @@ export class LocationListComponent implements OnInit, AfterViewInit {
       // Okul seçili değilse veri yüklemeyi bekle
       if (!school) {
         this.locations = [];
+        this.isLoading = false;
         return;
       }
 
       // Okul seçildiyse verileri yükle (süper admin dahil)
+      this.isLoading = true;
       this.refresh();
     });
   }
@@ -182,10 +211,12 @@ export class LocationListComponent implements OnInit, AfterViewInit {
     // Change detection için gerekli
   }
   refresh() {
+    // Ensure loading flag is set at the start of refresh
+    this.isLoading = true;
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-  let url = `${apiBase}/api/locations`;
+      let url = `${apiBase}/api/locations`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }
@@ -197,10 +228,20 @@ export class LocationListComponent implements OnInit, AfterViewInit {
           this.applySort();
           this.pageIndex = 0;
           this.updatePagedData();
+          // clear loading then update view
+          this.isLoading = false;
           this.cdr.detectChanges();
         },
-        error: err => console.error('Error loading locations:', err)
+        error: err => {
+          console.error('Error loading locations:', err);
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
       });
+    } else {
+      // No token: make sure spinner isn't stuck
+      this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -267,6 +308,13 @@ export class LocationListComponent implements OnInit, AfterViewInit {
     this.totalPages = Math.max(1, Math.ceil(this.locations.length / this.pageSize));
     const start = this.pageIndex * this.pageSize;
     this.pagedLocations = this.locations.slice(start, start + this.pageSize);
+  }
+
+  onPageSizeChange(value: number) {
+    const v = Number(value) || 25;
+    this.pageSize = v;
+    this.pageIndex = 0;
+    this.updatePagedData();
   }
 
   nextPage() {

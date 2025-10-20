@@ -9,151 +9,17 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 
-import { RouterLink, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { AuthService, User, School } from '../services/auth.service';
 import { environment } from '../../environments/environment';
 import { apiBase } from '../runtime-config';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatMenuModule, MatChipsModule, MatDividerModule, RouterLink],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatMenuModule, MatChipsModule, MatDividerModule],
   host: { 'ngSkipHydration': '' },
   template: `
     <div class="dashboard-container">
-      <!-- Okul işlemleri (yeni bölüm) -->
-      <div class="school-ops-section" style="margin-top:0;">
-        <h2 class="section-title">🏫 Okul işlemleri</h2>
-        <div class="actions-grid">
-          <button mat-raised-button routerLink="/school-employees" class="action-btn people-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">people</span>
-            Personel Yönetimi
-          </button>
-          <button mat-raised-button routerLink="/students" class="action-btn students-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">people_alt</span>
-            Öğrenciler
-          </button>
-        </div>
-      </div>
-
-      <!-- Ekran İşlemleri: move remaining okul işlemleri buttons here -->
-      <div class="screen-ops-section" style="margin-top:0;">
-        <h2 class="section-title">🖥️ Ekran İşlemleri</h2>
-        <div class="actions-grid">
-          <button mat-raised-button routerLink="/duty-locations" class="action-btn duty-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">place</span>
-            Nöbet Yerleri
-          </button>
-          <button mat-raised-button routerLink="/duty-schedule" class="action-btn duty-roster-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">table_rows</span>
-            Nöbetçi Tablosu
-          </button>
-          <button mat-raised-button routerLink="/school-time-table" class="action-btn schedule-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">schedule</span>
-            Ders Saatleri
-          </button>
-          <button mat-raised-button routerLink="/announcements" class="action-btn announcements-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">campaign</span>
-            Duyurular
-          </button>
-          <button mat-raised-button routerLink="/info-nuggets" class="action-btn info-nuggets-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">info</span>
-            Bilgi Kartları
-          </button>
-          <button mat-raised-button routerLink="/observances" class="action-btn observances-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">event</span>
-            Belirli Gün ve Haftalar
-          </button>
-        </div>
-      </div>
-
-      <!-- Demirbaş (önceden Hızlı Erişim) -->
-      <div class="quick-actions-section" style="margin-top:0;">
-        <h2 class="section-title">🚀 Demirbaş</h2>
-        <div class="actions-grid">
-          <button mat-raised-button color="primary" routerLink="/devices" class="action-btn primary-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">devices</span>
-            Demirbaşlar
-          </button>
-          <button mat-raised-button color="accent" routerLink="/operations" class="action-btn accent-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">assignment</span>
-            İşlemler
-          </button>
-          <button mat-raised-button routerLink="/technicians" class="action-btn info-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">engineering</span>
-            Teknisyenler
-          </button>
-          <button mat-raised-button routerLink="/locations" class="action-btn success-btn">
-              <span class="material-symbols-outlined action-icon" aria-hidden="true">location_on</span>
-            Lokasyonlar
-          </button>
-          <button mat-raised-button routerLink="/device-types" *ngIf="isSuperAdmin()" class="action-btn warning-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">category</span>
-            Demirbaş Tipleri
-          </button>
-          <button mat-raised-button routerLink="/operation-types" *ngIf="isSuperAdmin()" class="action-btn secondary-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">list_alt</span>
-            İşlem Türleri
-          </button>
-          <button mat-raised-button routerLink="/features" *ngIf="isSuperAdmin()" class="action-btn feature-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">settings</span>
-            Özellikler
-          </button>
-          <!-- Raporlar dropdown -->
-          <button mat-stroked-button [matMenuTriggerFor]="reportsMenu" class="action-btn report-btn">
-            <span class="material-symbols-outlined action-icon" aria-hidden="true">print</span>
-            Raporlar
-          </button>
-          <mat-menu #reportsMenu="matMenu">
-            <button mat-menu-item (click)="printGroupedByLocation()">Lokasyona göre grupla ve yazdır</button>
-            <button mat-menu-item (click)="printGroupedByDeviceType()">Demirbaş türüne göre grupla ve yazdır</button>
-          </mat-menu>
-        </div>
-      </div>
-
-
-
-      <!-- Super Admin için Okul Yönetimi -->
-      <div *ngIf="isSuperAdmin()" class="admin-section">
-          <h2 class="section-title">Sistem Yönetimi</h2>
-        <div class="admin-grid">
-          <mat-card class="admin-card" (click)="navigateTo('/schools')">
-            <div class="admin-card-content">
-              <span class="material-symbols-rounded admin-icon" aria-hidden="true">school</span>
-              <div class="admin-text">
-                <div class="admin-title">Okul Yönetimi</div>
-                <div class="admin-subtitle">Okulları yönet</div>
-              </div>
-            </div>
-          </mat-card>
-          <mat-card class="admin-card" (click)="navigateTo('/users')">
-            <div class="admin-card-content">
-              <span class="material-symbols-rounded admin-icon" aria-hidden="true">group</span>
-              <div class="admin-text">
-                <div class="admin-title">Kullanıcı Yönetimi</div>
-                <div class="admin-subtitle">Kullanıcıları yönet</div>
-              </div>
-            </div>
-          </mat-card>
-          <mat-card class="admin-card" (click)="navigateTo('/global-settings')">
-            <div class="admin-card-content">
-              <span class="material-symbols-rounded admin-icon" aria-hidden="true">settings</span>
-              <div class="admin-text">
-                <div class="admin-title">Global Ayarlar</div>
-                <div class="admin-subtitle">Sistem ayarları</div>
-              </div>
-            </div>
-          </mat-card>
-          <mat-card class="admin-card" (click)="navigateTo('/permissions')">
-            <div class="admin-card-content">
-              <span class="material-symbols-rounded admin-icon" aria-hidden="true">security</span>
-              <div class="admin-text">
-                <div class="admin-title">Yetkiler</div>
-                <div class="admin-subtitle">Yetki yönetimi</div>
-              </div>
-            </div>
-          </mat-card>
-        </div>
-      </div>
 
       <!-- Ana İstatistikler - 3'lü Grid -->
       <div class="main-stats-section">

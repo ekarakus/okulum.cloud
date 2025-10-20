@@ -13,6 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSortModule, MatSort } from '@angular/material/sort';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -36,7 +37,8 @@ const _styles = `
 .header-left { display:flex; align-items:center; gap:1rem; }
 .header h1 { margin:0; display:flex; align-items:center; gap:0.5rem; font-size:1.6rem; font-weight:600; color:#2c3e50; }
 .header-actions { display:flex; gap:0.5rem; align-items:center; }
-.table-card { border-radius:12px; overflow:hidden; padding:0.5rem 1rem 1rem 1rem; }
+.table-card { border-radius:12px; overflow:hidden; padding:0.5rem 1rem 1rem 1rem; position: relative; }
+.loading-overlay { position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.75); z-index: 20; }
 .table-header { padding: 12px 0; display:flex; align-items:center; justify-content:space-between; }
 .employees-table { width:100%; border-collapse:collapse; }
 .employees-table th, .employees-table td { border-bottom:1px solid #eee; }
@@ -48,7 +50,7 @@ const _styles = `
 @Component({
   selector: 'app-school-employees',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSortModule, MatTooltipModule, MatCheckboxModule],
+  imports: [CommonModule, MatCardModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSortModule, MatTooltipModule, MatCheckboxModule, MatProgressSpinnerModule],
   styles: [_styles],
   template: `
     <div class="container">
@@ -84,6 +86,9 @@ const _styles = `
         </div>
 
         <mat-card class="table-card">
+          <div *ngIf="isLoading" class="loading-overlay">
+            <mat-progress-spinner mode="indeterminate" diameter="60" color="primary"></mat-progress-spinner>
+          </div>
           <div class="table-container">
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
               <mat-form-field appearance="outline" style="width:520px;">
@@ -157,6 +162,7 @@ const _styles = `
 export class SchoolEmployeesComponent implements OnInit, OnDestroy {
   employees: any[] = [];
   types: any[] = [];
+  isLoading: boolean = false;
   displayedColumns = ['select','name','type','branch','email','actions'];
   dataSource: MatTableDataSource<any> = new MatTableDataSource<any>([]);
   // selection state for bulk delete
@@ -214,16 +220,19 @@ export class SchoolEmployeesComponent implements OnInit, OnDestroy {
     // If selected school already present, load immediately
     const school = this.auth.getSelectedSchool();
     if (school) {
+      this.isLoading = true;
       this.load(school.id);
     }
 
     // Also subscribe to changes (e.g., selection happens after component init)
     this.sub = this.auth.selectedSchool$.subscribe(s => {
       if (s) {
+        this.isLoading = true;
         this.load(s.id);
       } else {
         // clear list when no school selected
         this.employees = [];
+        this.isLoading = false;
       }
     });
 
@@ -295,6 +304,7 @@ export class SchoolEmployeesComponent implements OnInit, OnDestroy {
         // Apply client-side filter so the UI filters immediately even if server doesn't
         try { this.dataSource.filter = JSON.stringify(this.filterValues); } catch (e) { /* ignore */ }
       this.cdr.detectChanges();
+      this.isLoading = false;
     }, error: (err) => console.error(err) });
   }
 

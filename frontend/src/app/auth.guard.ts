@@ -20,13 +20,14 @@ export class AuthGuard implements CanActivate {
       return false;
     }
 
-    // Gerekli rol var mı kontrol et
-    const requiredRole = route.data['role'] as 'super_admin' | 'admin';
+    // Eğer rota verisinde bir rol belirtilmişse, en derin child'tan al (child route'lar override edebilir)
+    const deepest = this.getDeepestChild(route);
+    const requiredRole = deepest?.data?.['role'] as 'super_admin' | 'admin' | undefined;
     const currentUser = this.authService.getCurrentUser();
 
     if (requiredRole) {
-      if (currentUser?.role !== requiredRole) {
-        // Yetkisi yoksa ana sayfaya yönlendir
+      // Eğer kullanıcı yoksa ya da rol eşleşmiyorsa dashboard'a yönlendir
+      if (!currentUser || currentUser.role !== requiredRole) {
         this.router.navigate(['/dashboard']);
         return false;
       }
@@ -34,4 +35,14 @@ export class AuthGuard implements CanActivate {
 
     return true;
   }
+
+  // Yönlendirilmiş ActivatedRouteSnapshot ağacının en derin child'ını döndürür
+  private getDeepestChild(route: ActivatedRouteSnapshot): ActivatedRouteSnapshot {
+    let current: ActivatedRouteSnapshot = route;
+    while (current.firstChild) {
+      current = current.firstChild;
+    }
+    return current;
+  }
+
 }

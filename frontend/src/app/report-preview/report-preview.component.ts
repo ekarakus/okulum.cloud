@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -18,44 +18,49 @@ import { apiBase } from '../runtime-config';
   standalone: true,
   template: `
     <div class="page-container">
-      <div class="page-header">
-        <div class="left">
-          <button mat-icon-button (click)="close()" aria-label="Geri">
-            <span class="material-symbols-outlined">arrow_back</span>
-          </button>
-          <div class="page-title-wrap">
-            <div class="page-title">{{ title }}</div>
-            <div class="page-subtitle" *ngIf="subTitle">{{ subTitle }}</div>
+      <div *ngIf="isWaitingForSchool" style="padding:2rem;text-align:center;color:#666">
+        Okul seçiliyor... Lütfen bekleyin veya üst menüden bir okul seçin.
+      </div>
+      <ng-container *ngIf="!isWaitingForSchool">
+        <div class="page-header">
+          <div class="left">
+            <button mat-icon-button (click)="close()" aria-label="Geri">
+              <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div class="page-title-wrap">
+              <div class="page-title">{{ title }}</div>
+              <div class="page-subtitle" *ngIf="subTitle">{{ subTitle }}</div>
+            </div>
+          </div>
+          <div class="center-controls">
+            <mat-form-field *ngIf="showTypeFilter" appearance="outline" class="type-filter">
+              <mat-label>Demirbaş Türü</mat-label>
+              <mat-select [(value)]="selectedDeviceType" (selectionChange)="onDeviceTypeChange($event.value)">
+                <mat-option [value]="'all'">Tümü</mat-option>
+                <mat-option *ngFor="let t of deviceTypes" [value]="t.id">{{ t.name }} - {{ t.count || 0 }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field *ngIf="showLocationFilter" appearance="outline" class="type-filter">
+              <mat-label>Lokasyon</mat-label>
+              <mat-select [(value)]="selectedLocation" (selectionChange)="onLocationChange($event.value)">
+                <mat-option [value]="'all'">Tümü</mat-option>
+                <mat-option *ngFor="let l of locations" [value]="l.id">{{ l.name }} - {{ l.count || 0 }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <button mat-stroked-button color="primary" class="print-button" (click)="print()">
+              <span class="material-symbols-outlined">print</span>
+              <span class="btn-label">Yazdır</span>
+            </button>
+            <button mat-stroked-button color="primary" class="print-button" (click)="printQr()">
+              <span class="material-symbols-outlined">qr_code</span>
+              <span class="btn-label">QR Yazdır</span>
+            </button>
           </div>
         </div>
-        <div class="center-controls">
-          <mat-form-field *ngIf="showTypeFilter" appearance="outline" class="type-filter">
-            <mat-label>Demirbaş Türü</mat-label>
-            <mat-select [(value)]="selectedDeviceType" (selectionChange)="onDeviceTypeChange($event.value)">
-              <mat-option [value]="'all'">Tümü</mat-option>
-              <mat-option *ngFor="let t of deviceTypes" [value]="t.id">{{ t.name }} - {{ t.count || 0 }}</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field *ngIf="showLocationFilter" appearance="outline" class="type-filter">
-            <mat-label>Lokasyon</mat-label>
-            <mat-select [(value)]="selectedLocation" (selectionChange)="onLocationChange($event.value)">
-              <mat-option [value]="'all'">Tümü</mat-option>
-              <mat-option *ngFor="let l of locations" [value]="l.id">{{ l.name }} - {{ l.count || 0 }}</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <button mat-stroked-button color="primary" class="print-button" (click)="print()">
-            <span class="material-symbols-outlined">print</span>
-            <span class="btn-label">Yazdır</span>
-          </button>
-          <button mat-stroked-button color="primary" class="print-button" (click)="printQr()">
-            <span class="material-symbols-outlined">qr_code</span>
-            <span class="btn-label">QR Yazdır</span>
-          </button>
+        <div class="report-iframe-wrap">
+          <iframe id="reportFrame" #reportFrameRef width="100%" class="report-iframe"></iframe>
         </div>
-      </div>
-      <div class="report-iframe-wrap">
-        <iframe id="reportFrame" [src]="previewUrl" width="100%" class="report-iframe"></iframe>
-      </div>
+      </ng-container>
     </div>
   `,
   styles: [
@@ -86,6 +91,7 @@ export class ReportPreviewComponent implements OnInit {
   title = 'Rapor Önizleme';
   previewUrl: SafeResourceUrl | null = null;
   private objectUrl: string | null = null;
+  @ViewChild('reportFrameRef', { static: false }) reportFrameRef?: ElementRef<HTMLIFrameElement>;
   deviceTypes: any[] = [];
   selectedDeviceType: any = 'all';
   locations: any[] = [];
@@ -93,6 +99,7 @@ export class ReportPreviewComponent implements OnInit {
   showTypeFilter = false;
   showLocationFilter = false;
   subTitle: string | null = null; // will hold school + device type for display under title
+  isWaitingForSchool = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -104,7 +111,13 @@ export class ReportPreviewComponent implements OnInit {
   ) {}
   async ngOnInit(){
     const groupBy = this.route.snapshot.queryParamMap.get('groupBy') || 'location';
-    const selected = this.auth.getSelectedSchool();
+    this.isWaitingForSchool = false;
+    let selected = this.auth.getSelectedSchool();
+    if (!selected) {
+      this.isWaitingForSchool = true;
+      selected = await this.getOrSelectSchool();
+      this.isWaitingForSchool = false;
+    }
     const schoolId = this.route.snapshot.queryParamMap.get('school_id') || (selected ? String(selected.id) : null);
   const filterDeviceType = this.route.snapshot.queryParamMap.get('filter_device_type') || null;
   const filterLocation = this.route.snapshot.queryParamMap.get('filter_location') || null;
@@ -203,6 +216,7 @@ export class ReportPreviewComponent implements OnInit {
   private async loadAndRender(groupBy: string, schoolId: string | null, filterDeviceType: string | null, filterLocation: string | null = null){
     // reuse core logic from ngOnInit but isolated
     try {
+      const selected = this.auth.getSelectedSchool() || await this.getOrSelectSchool();
       const headers = this.auth.getToken() ? new HttpHeaders().set('Authorization', `Bearer ${this.auth.getToken()}`) : undefined;
   let url = `${apiBase}/api/reports/devices/grouped-by-${groupBy === 'location' ? 'location' : 'device-type'}`;
       const params: string[] = [];
@@ -306,7 +320,7 @@ export class ReportPreviewComponent implements OnInit {
         html += `<td>${it.identity_no||''}</td>`;
         html += `<td>${it.name||''}</td>`;
         html += `<td>${it.serial_no||''}</td>`;
-        html += `<td>${it.user||''}</td>`;
+  html += `<td>${(it.AssignedEmployee?.name || it.user) || ''}</td>`;
         html += `<td>${it.device_type||''}</td>`;
         html += `<td>${it.location||''}</td>`;
         html += `</tr>`;
@@ -326,8 +340,8 @@ export class ReportPreviewComponent implements OnInit {
   const cols = Math.max(1, Math.floor(pageWidthMm / finalCardMm)); // should be 6 for 35mm
   const identityFontMm = Math.max(2.5, Math.round(finalCardMm * 0.12 * 10) / 10);
 
-  const selected = this.auth.getSelectedSchool();
-      const schoolId = selected ? String(selected.id) : null;
+  const selected = this.auth.getSelectedSchool() || await this.getOrSelectSchool();
+    const schoolId = selected ? String(selected.id) : null;
       const headers = this.auth.getToken() ? new HttpHeaders().set('Authorization', `Bearer ${this.auth.getToken()}`) : undefined;
       // Build query to fetch devices filtered by school, device_type and location if selected
       const params: string[] = [];
@@ -388,19 +402,59 @@ export class ReportPreviewComponent implements OnInit {
     } catch(e){ console.error(e); alert('QR kodlar oluşturulamadı'); }
   }
 
+  // Try to get selected school; if none selected and user has schools, auto-select the first one
+  // Ensure there's a selected school. If none is selected yet, try to pick the first school from the current user.
+  // If still none, wait briefly for selectedSchool$ (useful when AuthService initializes from localStorage).
+  private async getOrSelectSchool(): Promise<any|null> {
+    let school = this.auth.getSelectedSchool();
+    if (school) return school;
+
+    const user = this.auth.getCurrentUser && this.auth.getCurrentUser();
+    if (user && (user.schools || []).length > 0) {
+      const first = user.schools[0];
+      try { this.auth.setSelectedSchool(first); } catch(e) {}
+      return first;
+    }
+
+    // wait up to 2 seconds for selectedSchool$ to emit (AuthService may be restoring state)
+    return new Promise(resolve => {
+      const sub = this.auth.selectedSchool$.subscribe(s => {
+        try { sub.unsubscribe(); } catch(e) {}
+        resolve(s || null);
+      });
+      setTimeout(() => { try { sub.unsubscribe(); } catch(e){}; resolve(null); }, 2000);
+    });
+  }
+
   print(){
     const iframe: HTMLIFrameElement | null = document.getElementById('reportFrame') as HTMLIFrameElement;
     if (iframe && iframe.contentWindow){ iframe.contentWindow.print(); }
   }
 
-  // Set the iframe src directly (used to avoid Angular resource URL sanitization for object URLs)
+  // Set the iframe src by assigning a sanitized SafeResourceUrl so Angular's
+  // resource URL security check (NG0904) is satisfied. We previously wrote the
+  // object URL directly into the DOM which triggers the runtime error when
+  // Angular also tries to bind the property.
   private setIframeSrc(url: string | null){
-    try{
-      const iframe = document.getElementById('reportFrame') as HTMLIFrameElement | null;
-      if (!iframe) return;
-      if (!url) { iframe.removeAttribute('src'); return; }
-      iframe.src = url;
-    }catch(e){ /* ignore */ }
+    try {
+      // remove previous
+      if (this.reportFrameRef && this.reportFrameRef.nativeElement) {
+        const el = this.reportFrameRef.nativeElement as HTMLIFrameElement;
+        if (!url) {
+          try { el.src = ''; } catch(e) {}
+          return;
+        }
+        // assign directly to the element to bypass Angular resource URL checks
+        try { el.src = url; } catch(e) { console.error('Failed to assign iframe src directly', e); }
+      } else {
+        // fallback: keep previewUrl for older consumers (shouldn't be used)
+        if (!url) { this.previewUrl = null; }
+        else { this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url) as SafeResourceUrl; }
+      }
+    } catch(e) {
+      console.error('Failed to set iframe src', e);
+      this.previewUrl = null;
+    }
   }
 
   close(){

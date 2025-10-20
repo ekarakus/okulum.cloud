@@ -10,6 +10,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DeviceAddDialogComponent } from '../device-add-dialog/device-add-dialog.component';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
@@ -18,7 +19,7 @@ import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-device-list',
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatTableModule, MatDialogModule, MatIconModule, MatMenuModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatTableModule, MatDialogModule, MatIconModule, MatMenuModule, MatTooltipModule, MatProgressSpinnerModule],
   host: { 'ngSkipHydration': '' },
   template: `
     <div class="container">
@@ -87,6 +88,9 @@ import { AuthService } from '../services/auth.service';
 
       <!-- Devices Table -->
       <mat-card class="table-card">
+        <div *ngIf="isLoading" class="loading-overlay">
+          <mat-progress-spinner mode="indeterminate" diameter="60" color="primary"></mat-progress-spinner>
+        </div>
         <div class="table-header">
           <h2>
             <mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon>
@@ -134,7 +138,7 @@ import { AuthService } from '../services/auth.service';
           <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('user')" style="cursor:pointer">Kullanıcı
             <mat-icon *ngIf="sort.field==='user'" style="vertical-align: middle; font-size: 16px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
           </th>
-          <td mat-cell *matCellDef="let element">{{element.user}}</td>
+          <td mat-cell *matCellDef="let element">{{ element.AssignedEmployee?.name || element.user }}</td>
         </ng-container>
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('status')" style="cursor:pointer">Durum
@@ -209,7 +213,8 @@ import { AuthService } from '../services/auth.service';
     .header h1 { margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.8rem; font-weight: 600; color: #2c3e50; }
     .header h1 mat-icon { font-size: 2rem; width: 2rem; height: 2rem; color: #1976d2; }
 
-    .table-card { border-radius: 12px; overflow: hidden; }
+  .table-card { border-radius: 12px; overflow: hidden; position: relative; }
+  .loading-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.75); z-index: 20; }
     .table-header { padding: 1.5rem; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
     .table-header h2 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #2c3e50; display: flex; align-items: center; gap: 0.5rem; }
     .table-container { overflow-x: auto; }
@@ -288,6 +293,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
   devices: any[] = [];
   locations: any[] = [];
   deviceTypes: any[] = [];
+  isLoading: boolean = false;
   selectedSchool: any = null;
   displayedColumns: string[] = ['identity_no', 'operations', 'name', 'serial_no', 'user', 'status', 'device_type', 'location', 'remark', 'qr', 'actions'];
   // Pagination
@@ -348,6 +354,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
         console.log('Device List - No school selected, clearing devices');
         this.devices = [];
         this.locations = [];
+        this.isLoading = false;
         return;
       }
 
@@ -395,20 +402,30 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
   refresh() {
     const token = this.getToken();
     if (token) {
+      this.isLoading = true;
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
   let url = `${apiBase}/api/devices`;
       if (this.selectedSchool) {
         url += `?school_id=${this.selectedSchool.id}`;
       }
       this.http.get<any[]>(url, { headers }).subscribe(async data => {
-        this.devices = await Promise.all(data.map(async c => {
-          const qrRes: any = await this.http.get(`${apiBase}/api/devices/${c.id}/qr`, { headers }).toPromise();
-          return { ...c, qr_code: qrRes.qr };
-        }));
-        this.pageIndex = 0;
-        this.loadSortFromStorage();
-        this.applyFilters();
-        this.cdr.detectChanges();
+        try {
+          this.devices = await Promise.all(data.map(async c => {
+            const qrRes: any = await this.http.get(`${apiBase}/api/devices/${c.id}/qr`, { headers }).toPromise();
+            return { ...c, qr_code: qrRes.qr };
+          }));
+          this.pageIndex = 0;
+          this.loadSortFromStorage();
+          this.applyFilters();
+          this.cdr.detectChanges();
+        } catch (err) {
+          console.error('Error while fetching device QR codes:', err);
+        } finally {
+          this.isLoading = false;
+        }
+      }, err => {
+        console.error('Error loading devices:', err);
+        this.isLoading = false;
       });
     }
   }
@@ -687,7 +704,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
       const safeName = (d.name||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const safeIdentity = (d.identity_no||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const safeSerial = (d.serial_no||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      const safeUser = (d.user||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const safeUser = ((d.AssignedEmployee && d.AssignedEmployee.name) || d.user || '').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const safeStatus = (d.status||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const safeDeviceType = (d.DeviceType?.name||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const safeLocation = (d.Location?.name||'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -695,7 +712,7 @@ export class DeviceListComponent implements OnInit, AfterViewInit {
         <td>${safeIdentity}</td>
         <td>${safeName}</td>
         <td>${safeSerial}</td>
-        <td>${safeUser}</td>
+  <td>${safeUser}</td>
         <td>${safeStatus}</td>
         <td>${safeRemark}</td>
         <td>${safeDeviceType}</td>

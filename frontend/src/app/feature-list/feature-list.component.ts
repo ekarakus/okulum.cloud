@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { FeatureAddEditDialogComponent } from '../feature-add-edit-dialog/feature-add-edit-dialog.component';
@@ -14,7 +15,7 @@ import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-feature-list',
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatProgressSpinnerModule],
   host: { 'ngSkipHydration': '' },
   template: `
     <div class="container">
@@ -36,7 +37,12 @@ import { environment } from '../../environments/environment';
       </div>
 
       <!-- Features Table -->
-      <mat-card class="table-card">
+          <mat-card class="table-card">
+            <div *ngIf="isLoading" class="loading-overlay">
+              <div class="spinner-wrap">
+                <mat-progress-spinner mode="indeterminate" diameter="60" color="primary"></mat-progress-spinner>
+              </div>
+            </div>
         <div class="table-header">
           <h2>
             <mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon>
@@ -107,6 +113,9 @@ import { environment } from '../../environments/environment';
     .header h1 mat-icon { font-size: 2rem; width: 2rem; height: 2rem; color: #1976d2; }
 
     .table-card { border-radius: 12px; overflow: hidden; }
+  .table-card { border-radius: 12px; overflow: hidden; position: relative; }
+  .loading-overlay { position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.75); z-index: 20; pointer-events: none; }
+  .loading-overlay .spinner-wrap { pointer-events: auto; z-index: 21; }
     .table-header { padding: 1.5rem; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
     .table-header h2 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #2c3e50; display: flex; align-items: center; gap: 0.5rem; }
     .table-container { overflow-x: auto; }
@@ -128,6 +137,7 @@ import { environment } from '../../environments/environment';
 })
 export class FeatureListComponent implements OnInit {
   features: any[] = [];
+  isLoading: boolean = false;
   // Sorting
   sort: { field: string | null, dir: 'asc' | 'desc' } = { field: null, dir: 'asc' };
   // Pagination
@@ -150,6 +160,7 @@ export class FeatureListComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.isLoading = true;
     this.loadFeatures();
   }
 
@@ -161,20 +172,32 @@ export class FeatureListComponent implements OnInit {
   }
 
   private loadFeatures() {
+    // Ensure loading flag is set when attempting to load features
+    this.isLoading = true;
     const token = this.getToken();
     if (token) {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-  this.http.get<any[]>(`${apiBase}/api/features`, { headers }).subscribe({
+      this.http.get<any[]>(`${apiBase}/api/features`, { headers }).subscribe({
         next: data => {
           this.features = data;
           this.pageIndex = 0;
           this.loadSortFromStorage();
           this.applySort();
           this.updatePagedData();
+          // clear loading then update view
+          this.isLoading = false;
           this.cdr.detectChanges();
         },
-        error: err => console.error('Error loading features:', err)
+        error: err => {
+          console.error('Error loading features:', err);
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
       });
+    } else {
+      // No token: clear loading so spinner won't stay visible
+      this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 

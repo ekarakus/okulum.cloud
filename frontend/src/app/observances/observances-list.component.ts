@@ -28,7 +28,7 @@ import { FormsModule } from '@angular/forms';
   imports: [CommonModule, MatCardModule, MatButtonModule, MatSnackBarModule, MatProgressSpinnerModule, FormsModule, MatTableModule, MatIconModule, MatPaginatorModule, MatSortModule, MatDialogModule, MatCheckboxModule, MatToolbarModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   template: `
     <div class="container">
-      <button #refreshTrigger type="button" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true"></button>
+  <button #refreshTrigger type="button" class="visually-hidden" tabindex="-1"></button>
       <div class="header">
         <div class="header-left">
           <button mat-icon-button (click)="goBack()" class="back-btn" aria-label="Geri">
@@ -145,6 +145,7 @@ import { FormsModule } from '@angular/forms';
     .header h1 mat-icon { font-size: 2rem; width: 2rem; height: 2rem; color: #1976d2; }
 
     .table-card { border-radius: 12px; overflow: hidden; }
+  .visually-hidden { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
     .table-header { padding: 1.5rem; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
     .table-header h2 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #2c3e50; display: flex; align-items: center; gap: 0.5rem; }
     .table-container { overflow-x: auto; }

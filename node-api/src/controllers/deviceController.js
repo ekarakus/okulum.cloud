@@ -1,5 +1,5 @@
 const config = require('../../config');
-const { Device, Feature, DeviceFeature, School } = require('../models/relations');
+const { Device, Feature, DeviceFeature, School, SchoolEmployee } = require('../models/relations');
 const { Location, DeviceType } = require('../models/relations');
 const QRCode = require('qrcode');
 
@@ -67,7 +67,8 @@ exports.getAll = async (req, res) => {
         { model: require('../models/deviceType'), as: 'DeviceType' },
         // Include DeviceFeature through attributes to expose feature values
         { model: Feature, as: 'Features', through: { attributes: ['value'] } },
-        { model: School, as: 'School', attributes: ['id', 'name', 'code'] }
+        { model: School, as: 'School', attributes: ['id', 'name', 'code'] },
+        { model: SchoolEmployee, as: 'AssignedEmployee', attributes: ['id','name','branch','email'] }
       ],
       order: [['created_at', 'DESC']]
     });
@@ -150,7 +151,8 @@ exports.getById = async (req, res) => {
         { model: require('../models/location'), as: 'Location' },
         { model: require('../models/deviceType'), as: 'DeviceType' },
         // Include DeviceFeature through attributes to expose feature values
-        { model: Feature, as: 'Features', through: { attributes: ['value'] } }
+        { model: Feature, as: 'Features', through: { attributes: ['value'] } },
+        { model: SchoolEmployee, as: 'AssignedEmployee', attributes: ['id','name','branch','email'] }
       ]
     });
     
@@ -205,12 +207,34 @@ exports.create = async (req, res) => {
     const identity_no = await generateIdentityNo(location_id, device_type_id);
     console.log('Generated identity_no:', identity_no);
     
+    // Normalize user fields: frontend may set a hidden _selectedUserId on the form when an employee is selected
+    let user_id = deviceData._selectedUserId || deviceData.user_id || null;
+    let user_snapshot = deviceData.user || null;
+    let user_is_employee = false;
+
+    if (user_id) {
+      // validate employee exists and belongs to the same school (if finalSchoolId available)
+      const emp = await require('../models/schoolEmployee').findByPk(user_id);
+      if (!emp) {
+        return res.status(400).json({ message: 'Seçilen personel bulunamadı' });
+      }
+      // If school is known, ensure employee belongs to that school
+      if (finalSchoolId && emp.school_id != finalSchoolId) {
+        return res.status(400).json({ message: 'Seçilen personel seçilen okul ile eşleşmiyor' });
+      }
+      user_snapshot = emp.name; // snapshot name
+      user_is_employee = true;
+    }
+
     const device = await Device.create({ 
       ...deviceData,
       location_id,
       device_type_id,
       school_id: finalSchoolId,
-      identity_no 
+      identity_no,
+      user: user_snapshot,
+      user_id,
+      user_is_employee
     });
     console.log('Device created:', device.id);
     
@@ -250,7 +274,8 @@ exports.create = async (req, res) => {
       include: [
         { model: require('../models/location'), as: 'Location' },
         { model: require('../models/deviceType'), as: 'DeviceType' },
-        { model: Feature, as: 'Features', through: { attributes: ['value'] } }
+        { model: Feature, as: 'Features', through: { attributes: ['value'] } },
+        { model: SchoolEmployee, as: 'AssignedEmployee', attributes: ['id','name','branch','email'] }
       ]
     });
     
@@ -298,8 +323,26 @@ exports.update = async (req, res) => {
       }
     }
     
-    // Device bilgilerini güncelle
-    await device.update(updateData);
+    // Normalize user fields for update
+    let user_id = updateData._selectedUserId || updateData.user_id || null;
+    let user_snapshot = updateData.user !== undefined ? updateData.user : device.user;
+    let user_is_employee = device.user_is_employee || false;
+
+    if (user_id) {
+      const emp = await require('../models/schoolEmployee').findByPk(user_id);
+      if (!emp) return res.status(400).json({ message: 'Seçilen personel bulunamadı' });
+      if (device.school_id && emp.school_id != device.school_id) {
+        return res.status(400).json({ message: 'Seçilen personel cihazın okuluyla eşleşmiyor' });
+      }
+      user_snapshot = emp.name;
+      user_is_employee = true;
+    } else if (updateData.user !== undefined) {
+      // free-text provided, mark as not employee
+      user_is_employee = false;
+    }
+
+    // Device bilgilerini güncelle (include normalized user fields)
+    await device.update({ ...updateData, user: user_snapshot, user_id, user_is_employee });
     
     // Features'ları güncelle (değerleri ile)
     if (selectedFeatures !== undefined) {
@@ -336,7 +379,8 @@ exports.update = async (req, res) => {
       include: [
         { model: require('../models/location'), as: 'Location' },
         { model: require('../models/deviceType'), as: 'DeviceType' },
-        { model: Feature, as: 'Features', through: { attributes: ['value'] } }
+        { model: Feature, as: 'Features', through: { attributes: ['value'] } },
+        { model: SchoolEmployee, as: 'AssignedEmployee', attributes: ['id','name','branch','email'] }
       ]
     });
     

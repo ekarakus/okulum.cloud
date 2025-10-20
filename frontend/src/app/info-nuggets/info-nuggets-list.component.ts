@@ -175,7 +175,21 @@ import { Router } from '@angular/router';
     .pagination-controls { display: flex; justify-content: center; align-items: center; padding: 1rem 0; gap: 1rem; }
     .page-info { font-size: 0.9rem; color: #666; }
 
-    @media (max-width: 768px) { .container { padding: 1rem; } .header { flex-direction: column; gap: 1rem; align-items: stretch; } .table-container { font-size: 0.9rem; } }
+    @media (max-width: 768px) {
+      .container { padding: 0.75rem; }
+      .header { flex-direction: column; gap: 0.75rem; align-items: stretch; }
+      .table-container { font-size: 0.9rem; }
+      /* Convert table rows into stacked cards for small screens */
+      table { display: block; }
+      thead { display: none; }
+      tbody { display: block; }
+      tr { display: block; margin-bottom: 12px; border: 1px solid #eee; border-radius: 8px; padding: 8px; background: #fff; }
+      td { display: flex; justify-content: space-between; padding: 6px 8px; width: 100%; box-sizing: border-box; }
+      td:first-child { justify-content: flex-start; width: 24px; }
+      .pagination-controls { flex-direction: column; gap: 8px; }
+      .sub-controls { flex-direction: column; align-items: stretch; }
+      .sub-controls > div { width: 100%; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap }
+    }
     .inactive-row { background-color: rgba(255, 200, 200, 0.45); }
   /* sortable header hover/cursor */
   th.sortable { cursor: pointer; user-select: none; }

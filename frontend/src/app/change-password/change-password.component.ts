@@ -23,7 +23,7 @@ import { environment } from '../../environments/environment';
         <mat-label>Mevcut Şifre</mat-label>
   <input #currentInput matInput name="currentPassword" autocomplete="current-password" [type]="showCurrent ? 'text' : 'password'" [(ngModel)]="currentPassword" />
         <button mat-icon-button matSuffix type="button" (click)="toggleShow('current')" [attr.aria-label]="showCurrent ? 'Hide' : 'Show'">
-          <mat-icon>{{ showCurrent ? 'visibility_off' : 'visibility' }}</mat-icon>
+          <mat-icon fontSet="material-symbols-outlined">{{ showCurrent ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
       </mat-form-field>
 
@@ -31,7 +31,7 @@ import { environment } from '../../environments/environment';
         <mat-label>Yeni Şifre</mat-label>
         <input matInput name="newPassword" autocomplete="new-password" [type]="showNew ? 'text' : 'password'" [(ngModel)]="newPassword" />
         <button mat-icon-button matSuffix type="button" (click)="toggleShow('new')" [attr.aria-label]="showNew ? 'Hide' : 'Show'">
-          <mat-icon>{{ showNew ? 'visibility_off' : 'visibility' }}</mat-icon>
+          <mat-icon fontSet="material-symbols-outlined">{{ showNew ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
       </mat-form-field>
 
@@ -39,7 +39,7 @@ import { environment } from '../../environments/environment';
         <mat-label>Yeni Şifre (Tekrar)</mat-label>
         <input matInput name="confirmPassword" autocomplete="new-password" [type]="showConfirm ? 'text' : 'password'" [(ngModel)]="confirmPassword" />
         <button mat-icon-button matSuffix type="button" (click)="toggleShow('confirm')" [attr.aria-label]="showConfirm ? 'Hide' : 'Show'">
-          <mat-icon>{{ showConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+          <mat-icon fontSet="material-symbols-outlined">{{ showConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
       </mat-form-field>
       <div mat-dialog-actions style="justify-content:flex-end; gap:.5rem;">

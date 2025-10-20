@@ -104,6 +104,10 @@ School.hasMany(UserSchool, { foreignKey: 'school_id', as: 'UserSchools' });
 School.hasMany(SchoolEmployee, { foreignKey: 'school_id', as: 'Employees' });
 SchoolEmployee.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 
+// Device assigned user (nullable FK to school_employees)
+SchoolEmployee.hasMany(Device, { foreignKey: 'user_id', as: 'AssignedDevices' });
+Device.belongsTo(SchoolEmployee, { foreignKey: 'user_id', as: 'AssignedEmployee' });
+
 // Province/District relations
 Province.hasMany(District, { foreignKey: 'province_id', as: 'Districts' });
 District.belongsTo(Province, { foreignKey: 'province_id', as: 'Province' });
