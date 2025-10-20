@@ -1,0 +1,205 @@
+import { Component, Inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { apiBase } from '../runtime-config';
+import { AuthService } from '../services/auth.service';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatOptionModule } from '@angular/material/core';
+
+@Component({
+  selector: 'app-fault-add-dialog',
+  standalone: true,
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatAutocompleteModule, MatOptionModule],
+  template: `
+    <h2 mat-dialog-title>Yeni Destek Talebi</h2>
+    <mat-dialog-content class="dialog-content">
+      <div style="display:flex; flex-direction:column; gap:8px; min-width:360px;">
+        <mat-form-field appearance="outline">
+          <mat-label>Lokasyon (zorunlu)</mat-label>
+          <input type="text" matInput [formControl]="locationCtrl" [matAutocomplete]="locAuto" placeholder="Lokasyon ara veya seç">
+          <mat-autocomplete #locAuto="matAutocomplete" (optionSelected)="onLocationSelected($event.option.value)" [displayWith]="displayLocation">
+            <mat-option *ngFor="let l of filteredLocations" [value]="l">{{l.name}} <span *ngIf="l.room_number">(Oda: {{l.room_number}})</span></mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+        <div *ngIf="submittedAttempt && !selectedLocation" style="color:#b00020; font-size:0.9rem; margin-top:-8px;">Lokasyon seçimi zorunlu.</div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Demirbaş (zorunlu)</mat-label>
+          <input type="text" matInput [formControl]="deviceCtrl" [matAutocomplete]="devAuto" placeholder="Demirbaş ara veya seç">
+          <mat-autocomplete #devAuto="matAutocomplete" (optionSelected)="onDeviceSelected($event.option.value)" [displayWith]="displayDevice">
+            <mat-option *ngFor="let d of filteredDevices" [value]="d">{{d.name}} ({{d.identity_no || d.serial_no}})</mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+        <div *ngIf="submittedAttempt && !deviceId" style="color:#b00020; font-size:0.9rem; margin-top:-8px;">Demirbaş seçimi zorunlu.</div>
+
+    <label>Arıza Detayı</label>
+  <textarea rows="6" [(ngModel)]="issueDetails" style="width:100%;font-size:12pt;padding:10px;"></textarea>
+  <div style="font-size:0.85rem; color:#666; margin-top:6px;">Not: Detay en az 10 karakter olmalıdır.</div>
+  <div *ngIf="submittedAttempt && (!issueDetails || issueDetails.trim().length < 10)" style="color:#b00020; font-size:0.9rem; margin-top:-8px;">Detay en az 10 karakter olmalı.</div>
+
+        <label>Görsel (opsiyonel)</label>
+        <input type="file" (change)="onFileChange($event)" />
+        <div *ngIf="imagePreviewUrl" style="margin-top:8px;">
+          <img [src]="imagePreviewUrl" style="max-width:200px; max-height:200px; border-radius:6px; border:1px solid #eee" />
+        </div>
+        <div *ngIf="uploading">Yükleniyor...</div>
+        <div *ngIf="imagePath">Sunucuda: {{imagePath}}</div>
+        <div *ngIf="error" style="color:#b00020">{{error}}</div>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions style="margin-top:12px;">
+      <button mat-stroked-button (click)="onCancel()">İptal</button>
+  <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="!canSubmit">Ekle</button>
+    </mat-dialog-actions>
+  `
+})
+export class FaultAddDialogComponent {
+  devices: any[] = [];
+  deviceId: number | null = null;
+  selectedLocation: any | null = null;
+  issueDetails = '';
+  imagePath: string | null = null;
+  imagePreviewUrl: string | null = null;
+  uploading = false;
+  submitting = false;
+  error: string | null = null;
+  // location/device controls
+  locationCtrl = new FormControl('');
+  deviceCtrl = new FormControl('');
+  locations: any[] = [];
+  filteredLocations: any[] = [];
+  filteredDevices: any[] = [];
+
+  constructor(public dialogRef: MatDialogRef<FaultAddDialogComponent>, @Inject(MAT_DIALOG_DATA) public data: any, private http: HttpClient, private auth: AuthService) {
+    this.loadLocations();
+    // watch input changes for client-side filtering
+    this.locationCtrl.valueChanges.subscribe(v => {
+      // if an object is present (user picked an option), set selectedLocation
+      if (v && typeof v === 'object' && 'id' in v) {
+        this.selectedLocation = v;
+      } else {
+        // if user is typing free text, clear selection
+        this.selectedLocation = null;
+      }
+      const q = (v && typeof v === 'object' && 'name' in v) ? (v as any).name : (v || '');
+      this.filteredLocations = this.locations.filter(l => String(l.name).toLowerCase().includes(String(q).toLowerCase()) || String(l.room_number || '').toLowerCase().includes(String(q).toLowerCase()));
+    });
+    this.deviceCtrl.valueChanges.subscribe(v => {
+      // if user typed free text (string), clear deviceId because selection isn't confirmed
+      if (v && typeof v === 'string') {
+        this.deviceId = null;
+      }
+      const q = (v && typeof v === 'object' && 'name' in v) ? (v as any).name : (v || '');
+      this.filteredDevices = this.devices.filter(d => String(d.name).toLowerCase().includes(String(q).toLowerCase()));
+    });
+  }
+  submittedAttempt = false;
+
+  private getToken(): string | null { return this.auth.getToken(); }
+
+  loadDevices() {
+    const token = this.getToken();
+    const selected = this.auth.getSelectedSchool();
+    if (!selected) return;
+    const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
+    const devUrl = `${apiBase}/api/devices?school_id=${selected.id}`;
+    try { console.debug('FaultAddDialog.loadDevices selectedSchool:', selected, 'url:', devUrl); } catch(e) {}
+    this.http.get(devUrl, { headers, responseType: 'json' } as any).subscribe({ next: (d: any) => { this.devices = d || []; this.filteredDevices = this.devices; }, error: (e: any) => console.error('load devices', e) });
+  }
+
+  loadLocations(){
+    const token = this.getToken();
+    const selected = this.auth.getSelectedSchool();
+    if (!selected) return;
+    const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
+    const locUrl = `${apiBase}/api/locations?school_id=${selected.id}`;
+    try { console.debug('FaultAddDialog.loadLocations selectedSchool:', selected, 'url:', locUrl); } catch(e) {}
+    this.http.get(locUrl, { headers, responseType: 'json' } as any).subscribe({ next: (d: any) => { this.locations = Array.isArray(d) ? d : []; this.filteredLocations = this.locations; }, error: (e: any) => console.error('load locations', e) });
+  }
+
+  onLocationSelected(loc: any){
+    // when a location is chosen, re-load devices for that location and set selectedLocation
+    const token = this.getToken();
+    const selected = this.auth.getSelectedSchool();
+    if (!selected) return;
+    const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
+    const lid = loc && loc.id ? loc.id : null;
+    // set selected location and clear any previously selected device
+    this.selectedLocation = loc && loc.id ? loc : null;
+    this.deviceId = null;
+    let url = `${apiBase}/api/devices?school_id=${selected.id}`;
+    if (lid) url += `&location_id=${lid}`;
+    try { console.debug('FaultAddDialog.onLocationSelected selectedSchool:', selected, 'locationId:', lid, 'url:', url); } catch(e) {}
+    this.http.get(url, { headers, responseType: 'json' } as any).subscribe({ next: (d: any) => { this.devices = d || []; this.filteredDevices = this.devices; }, error: (e:any) => { console.error('load devices by location', e); this.devices = []; this.filteredDevices = []; } });
+  }
+
+  onDeviceSelected(dev: any){
+    this.deviceId = dev && dev.id ? dev.id : null;
+  }
+
+  displayLocation = (loc: any) => {
+    if (!loc) return '';
+    return loc.room_number ? `${loc.name} (Oda: ${loc.room_number})` : `${loc.name}`;
+  }
+
+  displayDevice = (d: any) => {
+    if (!d) return '';
+    return d.identity_no ? `${d.name} (${d.identity_no})` : (d.serial_no ? `${d.name} (${d.serial_no})` : d.name);
+  }
+
+
+  // expose helper to determine whether submit should be enabled
+  get canSubmit(): boolean {
+    if (this.uploading || this.submitting) return false;
+    if (!this.selectedLocation) return false;
+    if (!this.deviceId) return false;
+    if (!this.issueDetails || this.issueDetails.trim().length < 10) return false;
+    return true;
+  }
+
+  async onFileChange(ev: any) {
+    const f = ev.target.files && ev.target.files[0]; if (!f) return;
+    // revoke previous preview if any
+    if (this.imagePreviewUrl) { URL.revokeObjectURL(this.imagePreviewUrl); this.imagePreviewUrl = null; }
+    this.imagePreviewUrl = URL.createObjectURL(f);
+    this.uploading = true; this.error = null;
+    try {
+      const fd = new FormData(); fd.append('file', f);
+      const token = this.getToken(); const headers: any = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res: any = await this.http.post(`${apiBase}/api/upload/fault-image`, fd, { headers }).toPromise();
+      if (res && res.path) this.imagePath = res.path;
+    } catch (err:any) { console.error('upload error', err); this.error = err?.error?.message || err?.message || 'Yükleme hatası'; }
+    finally { this.uploading = false; }
+  }
+
+  onCancel(){ this.dialogRef.close(null); }
+
+  // ensure we free the object URL when dialog closed
+  ngOnDestroy(){ if (this.imagePreviewUrl) { try { URL.revokeObjectURL(this.imagePreviewUrl); } catch(e){} this.imagePreviewUrl = null; } }
+
+  onSubmit(){
+    this.submittedAttempt = true;
+    const selected = this.auth.getSelectedSchool();
+    if (!selected) { this.error = 'Okul seçimi gerekli.'; return; }
+    if (!this.canSubmit) {
+      // show validation errors inline
+      if (!this.selectedLocation) this.error = 'Lokasyon seçimi zorunlu.';
+      else if (!this.deviceId) this.error = 'Demirbaş seçimi zorunlu.';
+      else if (!this.issueDetails || this.issueDetails.trim().length < 10) this.error = 'Detay en az 10 karakter olmalı.';
+      return;
+    }
+    this.submitting = true; this.error = null;
+    const payload: any = { school_id: selected.id, device_id: this.deviceId || null, issue_details: this.issueDetails, image: this.imagePath || null };
+    if (this.selectedLocation && this.selectedLocation.id) payload.location_id = this.selectedLocation.id;
+    try { console.debug('FaultAddDialog.onSubmit payload:', payload); } catch(e) {}
+    const token = this.getToken(); const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }) : new HttpHeaders({ 'Content-Type': 'application/json' });
+    this.http.post(`${apiBase}/api/faults`, payload, { headers }).subscribe({ next: () => { this.submitting = false; this.dialogRef.close('created'); }, error: e => { console.error('create fault', e); this.error = e?.error?.message || 'Kayıt hatası'; this.submitting = false; } });
+  }
+}

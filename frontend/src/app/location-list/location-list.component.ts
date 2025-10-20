@@ -222,9 +222,11 @@ export class LocationListComponent implements OnInit, AfterViewInit {
       }
       this.http.get<any[]>(url, { headers }).subscribe({
         next: data => {
-          this.locations = data;
+        this.locations = data;
           // Load saved sort preference and apply
           this.loadSortFromStorage();
+        // Default to alphabetical A-Z by name when no saved preference
+        if (!this.sort.field) { this.sort.field = 'name'; this.sort.dir = 'asc'; }
           this.applySort();
           this.pageIndex = 0;
           this.updatePagedData();

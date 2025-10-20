@@ -179,6 +179,20 @@ export const routes: Routes = [
       }
       ,
       {
+        path: 'faults',
+        loadComponent: () => import('./fault-list/fault-list.component').then(m => m.FaultListComponent),
+        data: { requiresSchool: true, permission: 'Destek Talepleri', title: 'Destek Talepleri' },
+        canActivate: [PermissionGuard]
+      }
+      ,
+      {
+        path: 'faults/:id',
+        loadComponent: () => import('./fault-detail/fault-detail.component').then(m => m.FaultDetailComponent),
+        data: { requiresSchool: true, permission: 'Destek Talepleri' },
+        canActivate: [PermissionGuard]
+      }
+      ,
+      {
         path: 'observances',
         loadComponent: () => import('./observances/observances-list.component').then(m => m.ObservancesListComponent),
         data: { requiresSchool: true, permission: 'Belirli Gün ve Haftalar' },

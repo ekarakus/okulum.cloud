@@ -5,7 +5,7 @@ const cors = require('cors');
 const app = express();
 
 app.use(cors({
-  origin: config.corsOrigins,
+  origin: (typeof config.getCorsOrigins === 'function' ? config.getCorsOrigins() : config.corsOrigins),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -39,6 +39,9 @@ const locationRoutes = require('./routes/locationRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 app.use('/api', locationRoutes);
 app.use('/api', uploadRoutes);
+// Fault-specific uploads (images for fault reports)
+const faultUploadRoutes = require('./routes/faultUploadRoutes');
+app.use('/api/upload', faultUploadRoutes);
 
 // User route
 const userRouter = require('./routes/userRoutes');
@@ -77,6 +80,10 @@ app.use('/api/operation-types', operationTypeRouter);
 // Feature route
 const featureRouter = require('./routes/feature');
 app.use('/api/features', featureRouter);
+
+// Fault reports (Destek Talepleri)
+const faultRouter = require('./routes/faultRoutes');
+app.use('/api/faults', faultRouter);
 
 // Global settings (super admin)
 const globalSettingRouter = require('./routes/globalSetting');

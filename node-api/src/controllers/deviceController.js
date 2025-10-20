@@ -59,6 +59,11 @@ exports.getAll = async (req, res) => {
       }
       whereClause.school_id = req.query.school_id;
     }
+    // Query parameter'dan location_id gelirse (lokasyona göre filtreleme)
+    if (req.query.location_id) {
+      // ensure user has access to the school if provided above
+      whereClause.location_id = req.query.location_id;
+    }
     
     const devices = await Device.findAll({
       where: whereClause,

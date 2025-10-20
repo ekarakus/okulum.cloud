@@ -59,6 +59,7 @@ import { PermissionService } from '../services/permission.service';
           <!-- Sub-item: operation types under İşlemler when user has permission -->
           <a routerLink="/operation-types" *ngIf="canSee('operation-types')" class="nav-link sub-link" [matTooltip]="'İşlem Türleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🏷️</span><span class="label" *ngIf="!collapsed">İşlem Türleri</span></a>
 
+          <a *ngIf="canSee('faults')" routerLink="/faults" class="nav-link" [matTooltip]="'Destek Talepleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🛠️</span><span class="label" *ngIf="!collapsed">Destek Talepleri</span></a>
           <a *ngIf="canSee('technicians')" routerLink="/technicians" class="nav-link" [matTooltip]="'Teknisyenler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🧑‍🔧</span><span class="label" *ngIf="!collapsed">Teknisyenler</span></a>
           <a *ngIf="canSee('locations')" routerLink="/locations" class="nav-link" [matTooltip]="'Lokasyonlar'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📍</span><span class="label" *ngIf="!collapsed">Lokasyonlar</span></a>
           <a routerLink="/features" *ngIf="canSee('features')" class="nav-link" [matTooltip]="'Özellikler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">⚙️</span><span class="label" *ngIf="!collapsed">Özellikler</span></a>
@@ -135,7 +136,8 @@ export class SidebarComponent {
     'operation-types': 'İşlem Türleri',
     'observances': 'Belirli Gün ve Haftalar',
     'features': 'Özellikler',
-    'reports': 'Raporlar'
+    'reports': 'Raporlar',
+  'faults': 'Destek Talepleri'
   };
 
   constructor(private svc: SidebarService, public auth: AuthService, private router: Router, private permission: PermissionService) {

@@ -1,0 +1,221 @@
+const { FaultReport, Device, User, School, Location, sequelize } = require('../models/relations');
+const { UserPermission, Permission, UserSchool } = require('../models/relations');
+
+async function hasSchoolPermission(userId, schoolId, permissionName) {
+  if (!userId || !schoolId) return false;
+  const [rows] = await sequelize.query(
+    `SELECT 1 FROM permissions p
+     JOIN user_permissions up ON up.permission_id = p.id
+     JOIN user_schools us ON us.id = up.user_schools_id
+     WHERE us.user_id = ? AND us.school_id = ? AND p.name = ? LIMIT 1`,
+    { replacements: [userId, schoolId, permissionName] }
+  );
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function createFault(req, res) {
+  try {
+    const userId = req.user.id;
+  const { school_id, device_id, issue_details, image } = req.body;
+  if (!school_id || !issue_details || !device_id) return res.status(400).json({ message: 'school_id, device_id and issue_details required' });
+
+    if (req.user.role !== 'super_admin') {
+  const ok = await hasSchoolPermission(userId, school_id, 'Destek Talepleri');
+      if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
+    }
+
+    const rec = await FaultReport.create({ school_id, device_id: device_id || null, user_id: userId, issue_details, image: image || null, operation_id: null });
+    return res.status(201).json({ fault: rec });
+  } catch (err) {
+    console.error('createFault error', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+async function listFaultsForSchool(req, res) {
+  try {
+    const schoolId = parseInt(req.params.schoolId, 10);
+    if (isNaN(schoolId)) return res.status(400).json({ message: 'Invalid school id' });
+    if (req.user.role !== 'super_admin') {
+  const ok = await hasSchoolPermission(req.user.id, schoolId, 'Destek Talepleri');
+      if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
+    }
+    const faultsRaw = await FaultReport.findAll({ where: { school_id: schoolId }, order: [['created_at', 'DESC']], include: [
+      { model: Device, as: 'Device', include: [{ model: Location, as: 'Location' }] },
+      { model: User, as: 'User' },
+      { model: School, as: 'School' }
+    ] });
+    const faults = (faultsRaw || []).map(f => {
+      const o = (typeof f.toJSON === 'function') ? f.toJSON() : f;
+      // flatten useful fields for frontend
+      o.device_name = (o.Device && o.Device.name) || o.device_name || null;
+      o.device_id = (o.Device && o.Device.id) || o.device_id || null;
+      o.location_name = (o.Device && o.Device.Location && o.Device.Location.name) || (o.Location && o.Location.name) || o.location_name || null;
+      o.location_room_number = (o.Device && o.Device.Location && o.Device.Location.room_number) || (o.Location && o.Location.room_number) || o.location_room_number || null;
+      o.user_name = (o.User && (o.User.name || o.User.username)) || o.user_name || null;
+      return o;
+    });
+    return res.json({ faults });
+  } catch (err) {
+    console.error('listFaultsForSchool', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// Server-side paged list with filters
+async function listFaultsPaged(req, res) {
+  try {
+    const { page = 1, pageSize = 20, search = '', status, school_id, sortField = 'created_at', sortDir = 'DESC' } = req.query;
+    const p = parseInt(page, 10) || 1;
+    const ps = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 20));
+
+    if (!school_id) return res.status(400).json({ message: 'school_id is required' });
+    const schoolId = parseInt(school_id, 10);
+    if (isNaN(schoolId)) return res.status(400).json({ message: 'Invalid school_id' });
+
+    if (req.user.role !== 'super_admin') {
+      const ok = await hasSchoolPermission(req.user.id, schoolId, 'Destek Talepleri');
+      if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
+    }
+
+    const where = { school_id: schoolId };
+    if (status) where.status = status;
+    if (search && search.length > 0) {
+      // simple search on issue_details
+      where.issue_details = { [sequelize.Op.like]: `%${search}%` };
+    }
+
+    const order = [[sortField, sortDir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC']];
+
+    const offset = (p - 1) * ps;
+    const { count, rows } = await FaultReport.findAndCountAll({ where, order, offset, limit: ps, include: [
+      { model: Device, as: 'Device', include: [{ model: Location, as: 'Location' }] },
+      { model: User, as: 'User' },
+      { model: School, as: 'School' }
+    ] });
+    const faults = (rows || []).map(f => {
+      const o = (typeof f.toJSON === 'function') ? f.toJSON() : f;
+      o.device_name = (o.Device && o.Device.name) || o.device_name || null;
+      o.device_id = (o.Device && o.Device.id) || o.device_id || null;
+      o.location_name = (o.Device && o.Device.Location && o.Device.Location.name) || (o.Location && o.Location.name) || o.location_name || null;
+      o.location_room_number = (o.Device && o.Device.Location && o.Device.Location.room_number) || (o.Location && o.Location.room_number) || o.location_room_number || null;
+      o.user_name = (o.User && (o.User.name || o.User.username)) || o.user_name || null;
+      return o;
+    });
+    return res.json({ total: count, page: p, pageSize: ps, faults });
+  } catch (err) {
+    console.error('listFaultsPaged', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+async function getFaultById(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
+    const fault = await FaultReport.findByPk(id, { include: [Device, User, School] });
+    if (!fault) return res.status(404).json({ message: 'Not found' });
+    if (req.user.role !== 'super_admin') {
+      const ok = await hasSchoolPermission(req.user.id, fault.school_id, 'Destek Talepleri');
+      if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
+    }
+    return res.json({ fault });
+  } catch (err) {
+    console.error('getFaultById', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+async function updateFaultStatus(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ message: 'status required' });
+    const fault = await FaultReport.findByPk(id);
+    if (!fault) return res.status(404).json({ message: 'Not found' });
+    if (req.user.role !== 'super_admin') {
+      const ok = await hasSchoolPermission(req.user.id, fault.school_id, 'Destek Talepleri');
+      if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
+    }
+    fault.status = status;
+    await fault.save();
+    return res.json({ fault });
+  } catch (err) {
+    console.error('updateFaultStatus', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+async function deleteFault(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
+    const fault = await FaultReport.findByPk(id);
+    if (!fault) return res.status(404).json({ message: 'Not found' });
+    if (req.user.role !== 'super_admin') {
+      const ok = await hasSchoolPermission(req.user.id, fault.school_id, 'Destek Talepleri');
+      if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
+    }
+    await fault.destroy();
+    return res.status(204).send();
+  } catch (err) {
+    console.error('deleteFault', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// Accepts { ids: [1,2,3] } and attempts to delete them. Returns { deleted: n, failed: m }
+async function bulkDeleteFaults(req, res) {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(i => parseInt(i, 10)).filter(i => !isNaN(i)) : [];
+    if (ids.length === 0) return res.status(400).json({ message: 'ids array required' });
+    let deleted = 0; let failed = 0; const failures = [];
+    for (const id of ids) {
+      try {
+        const fault = await FaultReport.findByPk(id);
+        if (!fault) { failed++; failures.push({ id, reason: 'not found' }); continue; }
+        if (req.user.role !== 'super_admin') {
+          const ok = await hasSchoolPermission(req.user.id, fault.school_id, 'Destek Talepleri');
+          if (!ok) { failed++; failures.push({ id, reason: 'permission' }); continue; }
+        }
+        await fault.destroy(); deleted++;
+      } catch (e) { failed++; failures.push({ id, reason: e.message || 'error' }); }
+    }
+    return res.json({ deleted, failed, failures });
+  } catch (err) {
+    console.error('bulkDeleteFaults', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// Bulk update: accepts { ids: [1,2,3], status: 'open' }
+async function bulkUpdateFaults(req, res) {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(i => parseInt(i, 10)).filter(i => !isNaN(i)) : [];
+    const status = req.body?.status;
+    if (ids.length === 0) return res.status(400).json({ message: 'ids array required' });
+    if (!status) return res.status(400).json({ message: 'status required' });
+
+    let updated = 0; let failed = 0; const failures = [];
+    for (const id of ids) {
+      try {
+        const fault = await FaultReport.findByPk(id);
+        if (!fault) { failed++; failures.push({ id, reason: 'not found' }); continue; }
+        if (req.user.role !== 'super_admin') {
+          const ok = await hasSchoolPermission(req.user.id, fault.school_id, 'Destek Talepleri');
+          if (!ok) { failed++; failures.push({ id, reason: 'permission' }); continue; }
+        }
+        fault.status = status;
+        await fault.save();
+        updated++;
+      } catch (e) { failed++; failures.push({ id, reason: e.message || 'error' }); }
+    }
+    return res.json({ updated, failed, failures });
+  } catch (err) {
+    console.error('bulkUpdateFaults', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { createFault, listFaultsForSchool, listFaultsPaged, getFaultById, updateFaultStatus, deleteFault, bulkDeleteFaults, bulkUpdateFaults };

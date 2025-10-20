@@ -25,6 +25,7 @@ const Student = require('./student');
 const InfoNuggetCategory = require('./infoNuggetCategory');
 const InfoNugget = require('./infoNugget');
 const SchoolObservance = require('./schoolObservance');
+const FaultReport = require('./faultReport');
 
 // İlişkiler
 Location.hasMany(Device, { foreignKey: 'location_id', as: 'Location' });
@@ -79,6 +80,18 @@ Technician.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 
 School.hasMany(Operation, { foreignKey: 'school_id', as: 'Operations' });
 Operation.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
+
+// FaultReport relations
+FaultReport.belongsTo(Device, { foreignKey: 'device_id', as: 'Device' });
+Device.hasMany(FaultReport, { foreignKey: 'device_id', as: 'FaultReports' });
+
+FaultReport.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+User.hasMany(FaultReport, { foreignKey: 'user_id', as: 'FaultReports' });
+
+FaultReport.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
+School.hasMany(FaultReport, { foreignKey: 'school_id', as: 'FaultReports' });
+
+FaultReport.belongsTo(Operation, { foreignKey: 'operation_id', as: 'Operation' });
 
 // User-School Many-to-Many İlişkisi
 User.belongsToMany(School, { 
@@ -180,4 +193,5 @@ module.exports = {
   InfoNugget,
   Student,
   SchoolObservance,
+    FaultReport,
 };

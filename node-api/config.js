@@ -21,6 +21,16 @@ const config = {
     sslRejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true' || false,
   },
   corsOrigins: (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean),
+  // During local development, default to allowing the Angular dev server ports if no env var provided
+  // This avoids silent CORS failures when CORS_ORIGINS isn't set in .env for dev environments.
+  getCorsOrigins() {
+    const list = (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (list.length > 0) return list;
+    if ((process.env.NODE_ENV || 'development') === 'development') {
+      return ['http://localhost:4201', 'http://localhost:4202'];
+    }
+    return [];
+  },
   testUserEmail: process.env.TEST_USER_EMAIL,
   testPassword: process.env.TEST_PASSWORD,
   frontendBaseUrl: process.env.FRONTEND_BASE_URL,
