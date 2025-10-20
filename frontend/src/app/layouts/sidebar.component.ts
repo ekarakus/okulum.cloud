@@ -5,6 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { SidebarService } from './sidebar.service';
 import { AuthService } from '../services/auth.service';
+import { PermissionService } from '../services/permission.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -12,9 +13,9 @@ import { AuthService } from '../services/auth.service';
   imports: [CommonModule, RouterModule, MatTooltipModule, MatIconModule],
   template: `
     <aside class="app-sidebar" [class.collapsed]="collapsed">
-      <div class="sidebar-header">
+        <div class="sidebar-header">
         <button class="collapse-btn" (click)="toggle()" aria-label="Toggle sidebar">{{ collapsed ? '»' : '«' }}</button>
-        <div class="brand" *ngIf="!collapsed">Okulum.cloud</div>
+        <div class="brand" *ngIf="!collapsed">{{ auth.isSuperAdmin() ? 'Okulum.cloud' : (auth.getSelectedSchool()?.name || 'Okulum.cloud') }}</div>
       </div>
 
       <nav class="sidebar-nav">
@@ -26,49 +27,50 @@ import { AuthService } from '../services/auth.service';
           </a>
         </div>
 
-        <div class="nav-group">
+        <div class="nav-group" *ngIf="showSchoolGroup()">
           <div class="group-title" *ngIf="!collapsed">🏫 Okul işlemleri</div>
-          <a routerLink="/school-employees" class="nav-link" [matTooltip]="'Personel Yönetimi'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed">
+          <a *ngIf="canSee('school_employees')" routerLink="/school-employees" class="nav-link" [matTooltip]="'Personel Yönetimi'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed">
             <span class="icon">👥</span>
             <span class="label" *ngIf="!collapsed">Personel Yönetimi</span>
           </a>
-          <a routerLink="/students" class="nav-link" [matTooltip]="'Öğrenciler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed">
+          <a *ngIf="canSee('students')" routerLink="/students" class="nav-link" [matTooltip]="'Öğrenciler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed">
             <span class="icon">🎓</span>
             <span class="label" *ngIf="!collapsed">Öğrenciler</span>
           </a>
         </div>
 
-        <div class="nav-group">
+        <div class="nav-group" *ngIf="showScreenGroup()">
           <div class="group-title" *ngIf="!collapsed">🖥️ Ekran İşlemleri</div>
-          <a routerLink="/duty-locations" class="nav-link" [matTooltip]="'Nöbet Yerleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📍</span><span class="label" *ngIf="!collapsed">Nöbet Yerleri</span></a>
-          <a routerLink="/duty-schedule" class="nav-link" [matTooltip]="'Nöbetçi Tablosu'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📅</span><span class="label" *ngIf="!collapsed">Nöbetçi Tablosu</span></a>
-          <a routerLink="/school-time-table" class="nav-link" [matTooltip]="'Ders Saatleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">⏰</span><span class="label" *ngIf="!collapsed">Ders Saatleri</span></a>
-          <a routerLink="/announcements" class="nav-link" [matTooltip]="'Duyurular'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📢</span><span class="label" *ngIf="!collapsed">Duyurular</span></a>
-          <a routerLink="/info-nuggets" class="nav-link" [matTooltip]="'Bilgi Kartları'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">💡</span><span class="label" *ngIf="!collapsed">Bilgi Kartları</span></a>
-          <a routerLink="/observances" class="nav-link" [matTooltip]="'Belirli Gün ve Haftalar'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📆</span><span class="label" *ngIf="!collapsed">Belirli Gün ve Haftalar</span></a>
+          <a *ngIf="canSee('duty_locations')" routerLink="/duty-locations" class="nav-link" [matTooltip]="'Nöbet Yerleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📍</span><span class="label" *ngIf="!collapsed">Nöbet Yerleri</span></a>
+          <a *ngIf="canSee('duty_schedule')" routerLink="/duty-schedule" class="nav-link" [matTooltip]="'Nöbetçi Tablosu'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📅</span><span class="label" *ngIf="!collapsed">Nöbetçi Tablosu</span></a>
+          <a *ngIf="canSee('school_time_table')" routerLink="/school-time-table" class="nav-link" [matTooltip]="'Ders Saatleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">⏰</span><span class="label" *ngIf="!collapsed">Ders Saatleri</span></a>
+          <a *ngIf="canSee('announcements')" routerLink="/announcements" class="nav-link" [matTooltip]="'Duyurular'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📢</span><span class="label" *ngIf="!collapsed">Duyurular</span></a>
+          <a *ngIf="canSee('info_nuggets')" routerLink="/info-nuggets" class="nav-link" [matTooltip]="'Bilgi Kartları'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">💡</span><span class="label" *ngIf="!collapsed">Bilgi Kartları</span></a>
+          <a *ngIf="canSee('observances')" routerLink="/observances" class="nav-link" [matTooltip]="'Belirli Gün ve Haftalar'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📆</span><span class="label" *ngIf="!collapsed">Belirli Gün ve Haftalar</span></a>
         </div>
 
-        <div class="nav-group">
+        <div class="nav-group" *ngIf="showAssetGroup()">
           <div class="group-title" *ngIf="!collapsed">🚀 Demirbaş</div>
-          <a routerLink="/devices" class="nav-link" [matTooltip]="'Demirbaşlar'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🖥️</span><span class="label" *ngIf="!collapsed">Demirbaşlar</span></a>
-          <!-- Sub-item: device types appears under Demirbaşlar for super admins -->
-          <a routerLink="/device-types" *ngIf="isSuperAdmin()" class="nav-link sub-link" [matTooltip]="'Demirbaş Tipleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🧾</span><span class="label" *ngIf="!collapsed">Demirbaş Tipleri</span></a>
+          <a *ngIf="canSee('devices')" routerLink="/devices" class="nav-link" [matTooltip]="'Demirbaşlar'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🖥️</span><span class="label" *ngIf="!collapsed">Demirbaşlar</span></a>
+          <!-- Sub-item: device types appears under Demirbaşlar when user has permission -->
+          <a routerLink="/device-types" *ngIf="canSee('device-types')" class="nav-link sub-link" [matTooltip]="'Demirbaş Tipleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🧾</span><span class="label" *ngIf="!collapsed">Demirbaş Tipleri</span></a>
 
-          <a routerLink="/operations" class="nav-link" [matTooltip]="'İşlemler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">⚙️</span><span class="label" *ngIf="!collapsed">İşlemler</span></a>
-          <!-- Sub-item: operation types under İşlemler for super admins -->
-          <a routerLink="/operation-types" *ngIf="isSuperAdmin()" class="nav-link sub-link" [matTooltip]="'İşlem Türleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🏷️</span><span class="label" *ngIf="!collapsed">İşlem Türleri</span></a>
+          <a *ngIf="canSee('operations')" routerLink="/operations" class="nav-link" [matTooltip]="'İşlemler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">⚙️</span><span class="label" *ngIf="!collapsed">İşlemler</span></a>
+          <!-- Sub-item: operation types under İşlemler when user has permission -->
+          <a routerLink="/operation-types" *ngIf="canSee('operation-types')" class="nav-link sub-link" [matTooltip]="'İşlem Türleri'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🏷️</span><span class="label" *ngIf="!collapsed">İşlem Türleri</span></a>
 
-          <a routerLink="/technicians" class="nav-link" [matTooltip]="'Teknisyenler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🧑‍🔧</span><span class="label" *ngIf="!collapsed">Teknisyenler</span></a>
-          <a routerLink="/locations" class="nav-link" [matTooltip]="'Lokasyonlar'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📍</span><span class="label" *ngIf="!collapsed">Lokasyonlar</span></a>
-          <a routerLink="/features" *ngIf="isSuperAdmin()" class="nav-link" [matTooltip]="'Özellikler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">⚙️</span><span class="label" *ngIf="!collapsed">Özellikler</span></a>
+          <a *ngIf="canSee('technicians')" routerLink="/technicians" class="nav-link" [matTooltip]="'Teknisyenler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🧑‍🔧</span><span class="label" *ngIf="!collapsed">Teknisyenler</span></a>
+          <a *ngIf="canSee('locations')" routerLink="/locations" class="nav-link" [matTooltip]="'Lokasyonlar'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📍</span><span class="label" *ngIf="!collapsed">Lokasyonlar</span></a>
+          <a routerLink="/features" *ngIf="canSee('features')" class="nav-link" [matTooltip]="'Özellikler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">⚙️</span><span class="label" *ngIf="!collapsed">Özellikler</span></a>
           <!-- Move reports to the end of the Demirbaş group -->
-          <a routerLink="/reports" class="nav-link" [matTooltip]="'Raporlar'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📊</span><span class="label" *ngIf="!collapsed">Raporlar</span></a>
+          <a *ngIf="canSee('reports')" routerLink="/reports" class="nav-link" [matTooltip]="'Raporlar'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">📊</span><span class="label" *ngIf="!collapsed">Raporlar</span></a>
         </div>
 
         <div class="nav-group" *ngIf="isSuperAdmin()">
           <div class="group-title" *ngIf="!collapsed">Sistem Yönetimi</div>
           <a routerLink="/schools" class="nav-link" [attr.title]="collapsed ? 'Okul Yönetimi' : null"><span class="icon">🏫</span><span class="label" *ngIf="!collapsed">Okul Yönetimi</span></a>
           <a routerLink="/users" class="nav-link" [attr.title]="collapsed ? 'Kullanıcı Yönetimi' : null"><span class="icon">👤</span><span class="label" *ngIf="!collapsed">Kullanıcı Yönetimi</span></a>
+          <a routerLink="/permissions" class="nav-link" [matTooltip]="'Yetkiler'" matTooltipPosition="right" [matTooltipDisabled]="!collapsed"><span class="icon">🔐</span><span class="label" *ngIf="!collapsed">Yetkiler</span></a>
           <a routerLink="/global-settings" class="nav-link" [attr.title]="collapsed ? 'Global Ayarlar' : null"><span class="icon">🔧</span><span class="label" *ngIf="!collapsed">Global Ayarlar</span></a>
         </div>
       </nav>
@@ -114,13 +116,54 @@ import { AuthService } from '../services/auth.service';
 })
 export class SidebarComponent {
   collapsed = false;
-  constructor(private svc: SidebarService, public auth: AuthService, private router: Router) {
+  // map certain routes to permission keys expected by backend/user.permissions
+  private permMap: Record<string,string> = {
+    'devices': 'Demirbaşlar',
+    'device-types': 'Demirbaş tipleri',
+    'locations': 'Lokasyonlar',
+    'duty_locations': 'Nöbet Yerleri',
+    'duty_schedule': 'Nöbetçi Tablosu',
+    'technicians': 'Teknisyenler',
+    'school_employees': 'Personel Yönetimi',
+    'school_time_table': 'Ders Saatleri',
+    'announcements': 'Duyurular',
+    'info_nuggets': 'Bilgi Kartları',
+    'info_nugget_categories': 'Bilgi Kartı Kategorileri',
+    // Use Turkish label to match permission names stored in DB
+    'students': 'Öğrenciler',
+    'operations': 'İşlemler',
+    'operation-types': 'İşlem Türleri',
+    'observances': 'Belirli Gün ve Haftalar',
+    'features': 'Özellikler',
+    'reports': 'Raporlar'
+  };
+
+  constructor(private svc: SidebarService, public auth: AuthService, private router: Router, private permission: PermissionService) {
     // initialize collapsed state from service
     this.svc.collapsed$.subscribe(v => this.collapsed = v);
   }
   toggle() { this.svc.toggle(); }
   // Use AuthService to determine super admin status (safer and reactive)
   isSuperAdmin() { return this.auth.isSuperAdmin(); }
+  canSee(key: string){
+    // super admin always sees
+    if(this.isSuperAdmin()) return true;
+    const perm = this.permMap[key] || key;
+    const allowed = this.permission.hasPermission(perm);
+    console.debug(`Sidebar.canSee -> key=${key} perm=${perm} allowed=${allowed}`);
+    return allowed;
+  }
+  // Group visibility helpers: return true if at least one child item is visible
+  showSchoolGroup(): boolean {
+    return this.canSee('school_employees') || this.canSee('students');
+  }
+  showScreenGroup(): boolean {
+    return this.canSee('duty_locations') || this.canSee('duty_schedule') || this.canSee('school_time_table') || this.canSee('announcements') || this.canSee('info_nuggets') || this.canSee('observances');
+  }
+  showAssetGroup(): boolean {
+    // include super-admin-only sublinks (device-types, operation-types, features) as visible when user is super admin
+    return this.canSee('devices') || this.isSuperAdmin() || this.canSee('operations') || this.canSee('technicians') || this.canSee('locations') || this.canSee('reports');
+  }
   logout(){
     try{ this.auth.logout(); }catch(e){}
     try{ this.router.navigate(['/login']); }catch(e){}

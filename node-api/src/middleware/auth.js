@@ -52,6 +52,16 @@ const requireAdminOrSuperAdmin = (req, res, next) => {
   next();
 };
 
+// Allow owner (requesting user == :id) or admin/super_admin
+const requireOwnerOrAdmin = (req, res, next) => {
+  const paramId = req.params.id ? parseInt(req.params.id, 10) : null;
+  if (!isNaN(paramId) && req.user && req.user.id === paramId) {
+    return next();
+  }
+  if (['super_admin', 'admin'].includes(req.user.role)) return next();
+  return res.status(403).json({ message: 'Bu işlem için yetkiniz yok' });
+};
+
 // Okul erişim kontrolü - kullanıcının belirtilen okula erişimi var mı?
 const checkSchoolAccess = async (req, res, next) => {
   try {
@@ -118,6 +128,8 @@ module.exports = {
   requireSuperAdmin,
   requireAdmin,
   requireAdminOrSuperAdmin,
+  requireOwnerOrAdmin,
   checkSchoolAccess,
   addUserSchools
 };
+

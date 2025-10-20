@@ -1041,6 +1041,14 @@ export class DashboardComponent implements OnInit {
     // Subscribe to auth service observables
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
+      // Debug: print current user and permissions to console for troubleshooting
+      try {
+        console.log('Auth currentUser (dashboard):', user);
+        const perms = (user as any)?.permissions || (user as any)?.Permissions || ((typeof localStorage !== 'undefined' && localStorage.getItem('user')) ? JSON.parse(localStorage.getItem('user') || '{}').permissions : undefined);
+        console.log('Detected permissions for current user:', perms);
+      } catch (e) {
+        console.warn('Could not log permissions', e);
+      }
     });
 
     this.authService.selectedSchool$.subscribe(school => {

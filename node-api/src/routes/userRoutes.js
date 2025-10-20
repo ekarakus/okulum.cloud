@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const { authenticateToken, requireSuperAdmin, requireAdminOrSuperAdmin } = require('../middleware/auth');
+const { authenticateToken, requireSuperAdmin, requireAdminOrSuperAdmin, requireOwnerOrAdmin } = require('../middleware/auth');
 
 // Tüm kullanıcıları listele (sadece super_admin)
 router.get('/', authenticateToken, requireSuperAdmin, userController.getAllUsers);
 
 // Belirli bir okuldaki kullanıcıları listele (yetkili admin veya super_admin)
 router.get('/school/:school_id', authenticateToken, requireAdminOrSuperAdmin, userController.getUsersBySchool);
+
+// Get consolidated permissions for a user (owner, admins or super_admin)
+router.get('/:id/permissions', authenticateToken, requireOwnerOrAdmin, userController.getPermissionsForUser);
 
 // Tek kullanıcı getir (sadece super_admin)
 router.get('/:id', authenticateToken, requireSuperAdmin, userController.getUserById);

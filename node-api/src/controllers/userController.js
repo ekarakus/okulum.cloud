@@ -311,3 +311,42 @@ exports.updateOwnPassword = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Get consolidated permissions for a given user_id (all schools)
+exports.getPermissionsForUser = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user id' });
+
+    const { UserPermission, UserSchool, Permission } = require('../models/relations');
+    // Find user_schools records for this user
+    const userSchools = await UserSchool.findAll({ where: { user_id: userId }, attributes: ['id', 'school_id'] });
+    const userSchoolIds = userSchools.map(us => us.id);
+
+    if (userSchoolIds.length === 0) {
+      return res.json({ permissions: [] });
+    }
+
+    // Debug: log userSchoolIds and ensure models are present
+    console.debug('getPermissionsForUser: userSchoolIds=', userSchoolIds);
+    console.debug('Models:', { UserPermission: !!UserPermission, Permission: !!Permission });
+
+    // Safer two-step approach: read user_permission rows, extract permission_ids
+    const upRows = await UserPermission.findAll({ where: { user_schools_id: userSchoolIds }, attributes: ['permission_id'] });
+    const permIds = Array.from(new Set(upRows.map(r => r.permission_id))).filter(Boolean);
+    console.debug('getPermissionsForUser: found permission ids=', permIds);
+    if (permIds.length === 0) {
+      return res.json({ permissions: [] });
+    }
+
+    const perms = await Permission.findAll({ where: { id: permIds }, attributes: ['id', 'name'], order: [['name', 'ASC']] });
+    res.json({ permissions: perms });
+  } catch (err) {
+    console.error('getPermissionsForUser error', err);
+    // In development return stack to help debugging; in production hide details
+    if (process.env.NODE_ENV !== 'production') {
+      return res.status(500).json({ error: err.message, stack: err.stack });
+    }
+    res.status(500).json({ error: 'Server error' });
+  }
+};

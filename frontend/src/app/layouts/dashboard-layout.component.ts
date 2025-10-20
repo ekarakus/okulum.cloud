@@ -26,7 +26,9 @@ import { filter } from 'rxjs/operators';
       <mat-toolbar color="primary" class="toolbar-content">
         <div class="brand">
           <span class="material-symbols-outlined icon icon-school" aria-hidden="true">school</span>
-          <span>okulum.cloud bilgi sistemi</span>
+          <span>
+            {{ isSuperAdmin() ? 'okulum.cloud bilgi sistemi' : (selectedSchool?.name || 'okulum.cloud bilgi sistemi') }}
+          </span>
         </div>
         <div class="toolbar-right" *ngIf="isLoggedIn()">
           <div class="nav-buttons">
