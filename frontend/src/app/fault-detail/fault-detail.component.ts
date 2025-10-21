@@ -27,7 +27,7 @@ import { MatDialogModule } from '@angular/material/dialog';
         <div style="margin-top:1rem; display:flex; gap:1rem; align-items:center;">
           <mat-form-field appearance="outline">
             <mat-select [(value)]="newStatus">
-              <mat-option value="open">Açık</mat-option>
+              <mat-option value="pending">Bekliyor</mat-option>
               <mat-option value="in_progress">İşlemde</mat-option>
               <mat-option value="closed">Kapandı</mat-option>
             </mat-select>
@@ -73,7 +73,8 @@ export class FaultDetailComponent implements OnInit {
       setTimeout(() => {
         try {
           this.fault = res.fault;
-          this.newStatus = this.fault?.status || null;
+          // map legacy 'open' to 'pending' for UI consistency
+          this.newStatus = (this.fault?.status === 'open') ? 'pending' : (this.fault?.status || null);
           this.isLoading = false;
           this.cdr.detectChanges();
         } catch (err) { console.error('apply fault data', err); }

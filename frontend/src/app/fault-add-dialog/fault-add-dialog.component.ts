@@ -47,7 +47,7 @@ import { MatSelectModule } from '@angular/material/select';
         <mat-form-field appearance="outline" *ngIf="editMode">
           <mat-label>Durum</mat-label>
           <mat-select [(value)]="selectedStatus">
-            <mat-option value="open">Açık</mat-option>
+            <mat-option value="pending">Bekliyor</mat-option>
             <mat-option value="in_progress">İşlemde</mat-option>
             <mat-option value="closed">Kapandı</mat-option>
           </mat-select>
@@ -170,7 +170,8 @@ export class FaultAddDialogComponent {
           this.imagePreviewUrl = (this.imagePath && String(this.imagePath).startsWith('http')) ? this.imagePath : `${apiBase}/${this.imagePath}`;
         } catch (e) {}
       }
-      this.selectedStatus = f.status || 'open';
+  // Map legacy 'open' incoming value to canonical 'pending'
+  this.selectedStatus = (f.status === 'open') ? 'pending' : (f.status || 'pending');
       // ensure locations loaded
       await this.loadLocations();
       if (f.Device && f.Device.Location) {

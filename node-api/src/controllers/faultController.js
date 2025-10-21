@@ -25,7 +25,8 @@ async function createFault(req, res) {
       if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
     }
 
-    const rec = await FaultReport.create({ school_id, device_id: device_id || null, user_id: userId, issue_details, image: image || null, operation_id: null });
+  // Ensure newly created reports use the canonical status value 'pending'
+  const rec = await FaultReport.create({ school_id, device_id: device_id || null, user_id: userId, issue_details, image: image || null, operation_id: null, status: 'pending' });
     return res.status(201).json({ fault: rec });
   } catch (err) {
     console.error('createFault error', err);
@@ -66,7 +67,7 @@ async function listFaultsForSchool(req, res) {
 // Server-side paged list with filters
 async function listFaultsPaged(req, res) {
   try {
-    const { page = 1, pageSize = 20, search = '', status, school_id, sortField = 'created_at', sortDir = 'DESC' } = req.query;
+  const { page = 1, pageSize = 20, search = '', status, school_id, sortField = 'created_at', sortDir = 'DESC' } = req.query;
     const p = parseInt(page, 10) || 1;
     const ps = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 20));
 
@@ -79,8 +80,12 @@ async function listFaultsPaged(req, res) {
       if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
     }
 
+    // Accept legacy value 'open' for compatibility but treat/filter as 'pending'
     const where = { school_id: schoolId };
-    if (status) where.status = status;
+    if (status) {
+      const mappedStatus = (String(status) === 'open') ? 'pending' : status;
+      where.status = mappedStatus;
+    }
     if (search && search.length > 0) {
       // simple search on issue_details
       where.issue_details = { [Op.like]: `%${search}%` };
@@ -135,15 +140,17 @@ async function updateFaultStatus(req, res) {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
-    const { status } = req.body;
-    if (!status) return res.status(400).json({ message: 'status required' });
+  let { status } = req.body;
+  if (!status) return res.status(400).json({ message: 'status required' });
+  // accept legacy 'open' but store canonical 'pending'
+  if (status === 'open') status = 'pending';
     const fault = await FaultReport.findByPk(id);
     if (!fault) return res.status(404).json({ message: 'Not found' });
     if (req.user.role !== 'super_admin') {
       const ok = await hasSchoolPermission(req.user.id, fault.school_id, 'Destek Talepleri');
       if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
     }
-    fault.status = status;
+  fault.status = status;
     await fault.save();
     return res.json({ fault });
   } catch (err) {
@@ -156,7 +163,8 @@ async function updateFault(req, res) {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
-    const { issue_details, device_id, location_id, image, status } = req.body;
+  const { issue_details, device_id, location_id, image } = req.body;
+  let { status } = req.body;
     const fault = await FaultReport.findByPk(id);
     if (!fault) return res.status(404).json({ message: 'Not found' });
     if (req.user.role !== 'super_admin') {
@@ -167,7 +175,10 @@ async function updateFault(req, res) {
     if (typeof device_id !== 'undefined') fault.device_id = device_id || null;
     if (typeof location_id !== 'undefined') fault.location_id = location_id || null;
     if (typeof image !== 'undefined') fault.image = image || null;
-    if (typeof status !== 'undefined') fault.status = status;
+    if (typeof status !== 'undefined') {
+      // accept legacy 'open' but store canonical 'pending'
+      fault.status = (status === 'open') ? 'pending' : status;
+    }
     await fault.save();
     return res.json({ fault });
   } catch (err) {
@@ -218,13 +229,14 @@ async function bulkDeleteFaults(req, res) {
   }
 }
 
-// Bulk update: accepts { ids: [1,2,3], status: 'open' }
+// Bulk update: accepts { ids: [1,2,3], status: 'pending' }
 async function bulkUpdateFaults(req, res) {
   try {
-    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(i => parseInt(i, 10)).filter(i => !isNaN(i)) : [];
-    const status = req.body?.status;
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(i => parseInt(i, 10)).filter(i => !isNaN(i)) : [];
+  let status = req.body?.status;
     if (ids.length === 0) return res.status(400).json({ message: 'ids array required' });
-    if (!status) return res.status(400).json({ message: 'status required' });
+  if (!status) return res.status(400).json({ message: 'status required' });
+  if (status === 'open') status = 'pending';
 
     let updated = 0; let failed = 0; const failures = [];
     for (const id of ids) {
@@ -235,7 +247,7 @@ async function bulkUpdateFaults(req, res) {
           const ok = await hasSchoolPermission(req.user.id, fault.school_id, 'Destek Talepleri');
           if (!ok) { failed++; failures.push({ id, reason: 'permission' }); continue; }
         }
-        fault.status = status;
+  fault.status = status;
         await fault.save();
         updated++;
       } catch (e) { failed++; failures.push({ id, reason: e.message || 'error' }); }

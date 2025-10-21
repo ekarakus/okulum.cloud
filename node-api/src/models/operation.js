@@ -18,6 +18,15 @@ const Operation = sequelize.define('Operation', {
       key: 'id'
     }
   },
+  support_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'İlgili destek talebi (fault_reports.id) - nullable',
+    references: {
+      model: 'fault_reports',
+      key: 'id'
+    }
+  },
   created_at: { 
     type: DataTypes.DATE, 
     defaultValue: DataTypes.NOW 

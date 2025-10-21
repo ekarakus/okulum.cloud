@@ -59,7 +59,7 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
           <mat-form-field appearance="outline" style="width:180px;">
             <mat-select placeholder="Durum" [(value)]="filters.status" (selectionChange)="onFilterChange()">
               <mat-option [value]="">Tümü</mat-option>
-              <mat-option value="open">Açık</mat-option>
+                <mat-option value="pending">Bekliyor</mat-option>
               <mat-option value="in_progress">İşlemde</mat-option>
               <mat-option value="closed">Kapandı</mat-option>
             </mat-select>
@@ -74,7 +74,7 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
           <mat-form-field appearance="outline" style="width:160px; margin-left:0.25rem;">
             <mat-select placeholder="Durum Değiştir" (selectionChange)="bulkChangeStatus($event.value)">
               <mat-option [value]="''">Durum seç</mat-option>
-              <mat-option value="open">Açık</mat-option>
+                  <mat-option value="pending">Bekliyor</mat-option>
               <mat-option value="in_progress">İşlemde</mat-option>
               <mat-option value="closed">Kapandı</mat-option>
             </mat-select>
@@ -119,7 +119,7 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
                   </button>
                 </td>
                 <td style="padding:8px; width:120px; text-align:center;">
-                  <button mat-stroked-button color="accent" (click)="onActionClick(f, $event)">İşlem Yap</button>
+                  <button *ngIf="isActionable(f)" mat-stroked-button color="accent" (click)="onActionClick(f, $event)">İşlem Yap</button>
                 </td>
               </tr>
             </tbody>
@@ -183,7 +183,8 @@ export class FaultListComponent implements OnInit {
 
   statusLabel(status: string | null | undefined): string {
     switch (status) {
-      case 'open': return 'Açık';
+      case 'pending': return 'Bekliyor';
+      case 'open': return 'Bekliyor';
       case 'in_progress': return 'İşlemde';
       case 'closed': return 'Kapandı';
       default: return status || '';
@@ -431,5 +432,12 @@ export class FaultListComponent implements OnInit {
       this.selectionMap[f.id] = checked;
     }
     this.cdr.detectChanges();
+  }
+
+  // Determine whether the action button should be shown for a given record
+  isActionable(f: any): boolean {
+    if (!f) return false;
+    // Only actionable when status is exactly 'in_progress'
+    return String(f.status) === 'in_progress';
   }
 }

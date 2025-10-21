@@ -9,7 +9,7 @@ const FaultReport = sequelize.define('FaultReport', {
   issue_details: { type: DataTypes.TEXT, allowNull: false },
   operation_id: { type: DataTypes.INTEGER, allowNull: true },
   image: { type: DataTypes.STRING, allowNull: true, comment: 'Optional image path or URL' },
-  status: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 'open' },
+  status: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 'pending' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, {
