@@ -72,6 +72,7 @@ export class FaultReportComponent implements OnInit {
   imagePath: string | null = null;
   imagePreviewUrl: string | null = null;
   uploading = false;
+  selectedFile: File | null = null;
   submitting = false;
   isLoading = false;
   error: string | null = null;
@@ -106,45 +107,40 @@ export class FaultReportComponent implements OnInit {
   async onFileChange(ev: any) {
     const f = ev.target.files && ev.target.files[0];
     if (!f) return;
-    this.uploading = true;
     this.error = null;
     // create object URL for instant preview
-    try {
-      if (this.imagePreviewUrl) URL.revokeObjectURL(this.imagePreviewUrl);
-      this.imagePreviewUrl = URL.createObjectURL(f);
-    } catch (e) { /* ignore on server or unsupported env */ }
-    try {
-      const fd = new FormData();
-      fd.append('file', f);
-      const token = this.auth.getToken();
-      const headers: any = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res: any = await this.http.post(`${apiBase}/api/upload/fault-image`, fd, { headers }).toPromise();
-      if (res && res.path) this.imagePath = res.path;
-    } catch (err:any) {
-      console.error('upload error', err);
-      this.error = err?.error?.message || err?.message || 'Yükleme hatası';
-    } finally {
-      this.uploading = false;
-    }
+    try { if (this.imagePreviewUrl) { try { URL.revokeObjectURL(this.imagePreviewUrl); } catch(e){} } this.imagePreviewUrl = URL.createObjectURL(f); } catch (e) {}
+    this.selectedFile = f;
+    // do not upload now, upload in submit()
   }
 
   submit() {
   const selected = this.auth.getSelectedSchool();
   if (!selected) { this.error = 'Okul seçimi gerekli.'; return; }
   if (!this.issueDetails || this.issueDetails.trim().length < 10) { this.error = 'Arıza detayı en az 10 karakter olmalı.'; return; }
-    this.submitting = true;
-    this.error = null;
-    this.success = false;
-    const payload: any = {
-      school_id: selected.id,
-      device_id: this.deviceId || null,
-      issue_details: this.issueDetails,
-      image: this.imagePath || null
-    };
-    const token = this.auth.getToken();
-    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }) : new HttpHeaders({ 'Content-Type': 'application/json' });
-    this.http.post(`${apiBase}/api/faults`, payload, { headers }).subscribe({ next: (res) => { this.success = true; this.resetForm(); this.submitting = false; }, error: (e) => { console.error('create fault', e); this.error = e?.error?.message || 'Kayıt sırasında hata oldu'; this.submitting = false; } });
+    (async () => {
+      this.submitting = true;
+      this.error = null;
+      this.success = false;
+      let newImagePath: string | null = this.imagePath || null;
+      if (this.selectedFile) {
+        this.uploading = true;
+        try {
+          const fd = new FormData(); fd.append('file', this.selectedFile);
+          const token = this.auth.getToken(); const headers: any = {}; if (token) headers['Authorization'] = `Bearer ${token}`;
+          const res: any = await this.http.post(`${apiBase}/api/upload/fault-image`, fd, { headers }).toPromise();
+          if (res && res.path) newImagePath = res.path;
+        } catch (err:any) { console.error('upload error', err); this.error = err?.error?.message || err?.message || 'Yükleme hatası'; this.submitting = false; this.uploading = false; return; }
+        finally { this.uploading = false; }
+      }
+      const payload: any = { school_id: selected.id, device_id: this.deviceId || null, issue_details: this.issueDetails, image: newImagePath || null };
+      const token = this.auth.getToken();
+      const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }) : new HttpHeaders({ 'Content-Type': 'application/json' });
+      try {
+        await this.http.post(`${apiBase}/api/faults`, payload, { headers }).toPromise();
+        this.success = true; this.resetForm(); this.submitting = false;
+      } catch (e:any) { console.error('create fault', e); this.error = e?.error?.message || 'Kayıt sırasında hata oldu'; this.submitting = false; }
+    })();
   }
 
   resetForm() {

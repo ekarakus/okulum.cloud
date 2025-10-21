@@ -10,6 +10,7 @@ router.get('/school/:schoolId', authenticateToken, faultCtrl.listFaultsForSchool
 router.get('/', authenticateToken, faultCtrl.listFaultsPaged);
 router.get('/:id', authenticateToken, faultCtrl.getFaultById);
 router.patch('/:id/status', authenticateToken, faultCtrl.updateFaultStatus);
+router.patch('/:id', authenticateToken, faultCtrl.updateFault);
 router.delete('/:id', authenticateToken, faultCtrl.deleteFault);
 router.post('/bulk-delete', authenticateToken, faultCtrl.bulkDeleteFaults);
 router.post('/bulk-update', authenticateToken, faultCtrl.bulkUpdateFaults);

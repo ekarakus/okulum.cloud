@@ -7,7 +7,7 @@ const app = express();
 app.use(cors({
   origin: (typeof config.getCorsOrigins === 'function' ? config.getCorsOrigins() : config.corsOrigins),
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
   optionsSuccessStatus: 200
 }));

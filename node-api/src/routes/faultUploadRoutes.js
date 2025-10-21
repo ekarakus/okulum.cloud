@@ -21,5 +21,7 @@ const upload = multer({ storage });
 const ctrl = require('../controllers/faultUploadController');
 
 router.post('/fault-image', upload.single('file'), ctrl.uploadFaultImage);
+// delete uploaded fault image by path (expects JSON { path: 'uploads/faults/images/filename' })
+router.delete('/fault-image', ctrl.deleteFaultImage);
 
 module.exports = router;

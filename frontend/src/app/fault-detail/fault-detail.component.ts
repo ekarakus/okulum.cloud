@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, Optional } from '@angular/core';
+import { Component, OnInit, Inject, Optional, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -49,7 +49,8 @@ export class FaultDetailComponent implements OnInit {
     private http: HttpClient,
     @Optional() private route: ActivatedRoute | null,
     private router: Router,
-    @Inject('PLATFORM_ID') private platformId: any,
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: any,
     @Optional() @Inject(MAT_DIALOG_DATA) public data: any,
     @Optional() private dialogRef?: MatDialogRef<FaultDetailComponent>
   ) {}
@@ -68,8 +69,16 @@ export class FaultDetailComponent implements OnInit {
     const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
     try {
       const res: any = await this.http.get(`${apiBase}/api/faults/${id}`, { headers } as any).toPromise();
-      this.fault = res.fault; this.newStatus = this.fault.status; this.isLoading = false;
-    } catch (e) { console.error('load fault detail', e); this.isLoading = false; }
+      // Avoid ExpressionChangedAfterItHasBeenCheckedError in dialog by assigning in next macrotask
+      setTimeout(() => {
+        try {
+          this.fault = res.fault;
+          this.newStatus = this.fault?.status || null;
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        } catch (err) { console.error('apply fault data', err); }
+      }, 0);
+    } catch (e) { console.error('load fault detail', e); this.isLoading = false; try { this.cdr.detectChanges(); } catch(err){} }
   }
 
   async changeStatus(){
@@ -78,10 +87,11 @@ export class FaultDetailComponent implements OnInit {
     const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
     try {
       const res: any = await this.http.patch(`${apiBase}/api/faults/${this.fault.id}/status`, { status: this.newStatus }, { headers } as any).toPromise();
-      this.fault = res.fault;
-      alert('Durum güncellendi');
+  this.fault = res.fault;
+  alert('Durum güncellendi');
       // if opened as dialog, notify parent
-      try { if (this.dialogRef) this.dialogRef.close('updated'); } catch(e) {}
+  try { if (this.dialogRef) this.dialogRef.close('updated'); } catch(e) {}
+  try { this.cdr.detectChanges(); } catch(e) {}
     } catch (e) { console.error('update status', e); alert('Güncelleme başarısız'); }
   }
 

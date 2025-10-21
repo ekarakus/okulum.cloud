@@ -1,4 +1,5 @@
 const { FaultReport, Device, User, School, Location, sequelize } = require('../models/relations');
+const { Op } = require('sequelize');
 const { UserPermission, Permission, UserSchool } = require('../models/relations');
 
 async function hasSchoolPermission(userId, schoolId, permissionName) {
@@ -82,7 +83,7 @@ async function listFaultsPaged(req, res) {
     if (status) where.status = status;
     if (search && search.length > 0) {
       // simple search on issue_details
-      where.issue_details = { [sequelize.Op.like]: `%${search}%` };
+      where.issue_details = { [Op.like]: `%${search}%` };
     }
 
     const order = [[sortField, sortDir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC']];
@@ -113,7 +114,11 @@ async function getFaultById(req, res) {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
-    const fault = await FaultReport.findByPk(id, { include: [Device, User, School] });
+    const fault = await FaultReport.findByPk(id, { include: [
+      { model: Device, as: 'Device', include: [{ model: Location, as: 'Location' }] },
+      { model: User, as: 'User' },
+      { model: School, as: 'School' }
+    ] });
     if (!fault) return res.status(404).json({ message: 'Not found' });
     if (req.user.role !== 'super_admin') {
       const ok = await hasSchoolPermission(req.user.id, fault.school_id, 'Destek Talepleri');
@@ -143,6 +148,30 @@ async function updateFaultStatus(req, res) {
     return res.json({ fault });
   } catch (err) {
     console.error('updateFaultStatus', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+async function updateFault(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
+    const { issue_details, device_id, location_id, image, status } = req.body;
+    const fault = await FaultReport.findByPk(id);
+    if (!fault) return res.status(404).json({ message: 'Not found' });
+    if (req.user.role !== 'super_admin') {
+      const ok = await hasSchoolPermission(req.user.id, fault.school_id, 'Destek Talepleri');
+      if (!ok) return res.status(403).json({ message: 'Yetersiz yetki' });
+    }
+    if (typeof issue_details !== 'undefined') fault.issue_details = issue_details;
+    if (typeof device_id !== 'undefined') fault.device_id = device_id || null;
+    if (typeof location_id !== 'undefined') fault.location_id = location_id || null;
+    if (typeof image !== 'undefined') fault.image = image || null;
+    if (typeof status !== 'undefined') fault.status = status;
+    await fault.save();
+    return res.json({ fault });
+  } catch (err) {
+    console.error('updateFault', err);
     return res.status(500).json({ error: err.message });
   }
 }
@@ -218,4 +247,4 @@ async function bulkUpdateFaults(req, res) {
   }
 }
 
-module.exports = { createFault, listFaultsForSchool, listFaultsPaged, getFaultById, updateFaultStatus, deleteFault, bulkDeleteFaults, bulkUpdateFaults };
+module.exports = { createFault, listFaultsForSchool, listFaultsPaged, getFaultById, updateFaultStatus, updateFault, deleteFault, bulkDeleteFaults, bulkUpdateFaults };

@@ -29,3 +29,22 @@ exports.uploadFaultImage = async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 };
+
+exports.deleteFaultImage = async (req, res) => {
+  try {
+    const p = (req.body && req.body.path) || (req.query && req.query.path) || null;
+    if (!p) return res.status(400).json({ message: 'path required' });
+    // allow either absolute or relative paths; normalize
+    const filepath = p.startsWith('uploads') ? path.join(__dirname, '..', '..', p) : path.join(__dirname, '..', '..', 'uploads', 'faults', 'images', path.basename(p));
+    const uploadsDir = path.join(__dirname, '..', '..', 'uploads', 'faults', 'images');
+    if (!fs.existsSync(filepath)) return res.status(404).json({ message: 'file not found' });
+    // safety: ensure the file is inside uploadsDir
+    const resolved = path.resolve(filepath);
+    if (!resolved.startsWith(path.resolve(uploadsDir))) return res.status(400).json({ message: 'invalid path' });
+    fs.unlinkSync(resolved);
+    return res.json({ deleted: true });
+  } catch (err) {
+    console.error('delete fault image error', err);
+    return res.status(500).json({ error: err.message });
+  }
+};

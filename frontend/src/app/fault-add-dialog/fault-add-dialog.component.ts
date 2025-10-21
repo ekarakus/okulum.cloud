@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -11,13 +11,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatOptionModule } from '@angular/material/core';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-fault-add-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatAutocompleteModule, MatOptionModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatAutocompleteModule, MatSelectModule, MatOptionModule],
   template: `
-    <h2 mat-dialog-title>Yeni Destek Talebi</h2>
+    <h2 mat-dialog-title>{{ editMode ? 'Destek Talebi Düzenle' : 'Yeni Destek Talebi' }}</h2>
     <mat-dialog-content class="dialog-content">
       <div style="display:flex; flex-direction:column; gap:8px; min-width:360px;">
         <mat-form-field appearance="outline">
@@ -41,21 +42,33 @@ import { MatOptionModule } from '@angular/material/core';
     <label>Arıza Detayı</label>
   <textarea rows="6" [(ngModel)]="issueDetails" style="width:100%;font-size:12pt;padding:10px;"></textarea>
   <div style="font-size:0.85rem; color:#666; margin-top:6px;">Not: Detay en az 10 karakter olmalıdır.</div>
-  <div *ngIf="submittedAttempt && (!issueDetails || issueDetails.trim().length < 10)" style="color:#b00020; font-size:0.9rem; margin-top:-8px;">Detay en az 10 karakter olmalı.</div>
+        <div *ngIf="submittedAttempt && (!issueDetails || issueDetails.trim().length < 10)" style="color:#b00020; font-size:0.9rem; margin-top:-8px;">Detay en az 10 karakter olmalı.</div>
+
+        <mat-form-field appearance="outline" *ngIf="editMode">
+          <mat-label>Durum</mat-label>
+          <mat-select [(value)]="selectedStatus">
+            <mat-option value="open">Açık</mat-option>
+            <mat-option value="in_progress">İşlemde</mat-option>
+            <mat-option value="closed">Kapandı</mat-option>
+          </mat-select>
+        </mat-form-field>
 
         <label>Görsel (opsiyonel)</label>
         <input type="file" (change)="onFileChange($event)" />
-        <div *ngIf="imagePreviewUrl" style="margin-top:8px;">
+        <div *ngIf="imagePreviewUrl" style="margin-top:8px; display:flex; gap:8px; align-items:flex-start;">
           <img [src]="imagePreviewUrl" style="max-width:200px; max-height:200px; border-radius:6px; border:1px solid #eee" />
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <button mat-stroked-button color="warn" (click)="clearImage($event)">Görseli Kaldır</button>
+            <div style="font-size:0.85rem; color:#666;">Mevcut: <span *ngIf="imagePath">{{imagePath}}</span><span *ngIf="!imagePath">(yok)</span></div>
+          </div>
         </div>
         <div *ngIf="uploading">Yükleniyor...</div>
-        <div *ngIf="imagePath">Sunucuda: {{imagePath}}</div>
         <div *ngIf="error" style="color:#b00020">{{error}}</div>
       </div>
     </mat-dialog-content>
     <mat-dialog-actions style="margin-top:12px;">
       <button mat-stroked-button (click)="onCancel()">İptal</button>
-  <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="!canSubmit">Ekle</button>
+  <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="!canSubmit">{{ editMode ? 'Güncelle' : 'Ekle' }}</button>
     </mat-dialog-actions>
   `
 })
@@ -66,7 +79,9 @@ export class FaultAddDialogComponent {
   issueDetails = '';
   imagePath: string | null = null;
   imagePreviewUrl: string | null = null;
+  selectedFile: File | null = null; // file chosen but not yet uploaded
   uploading = false;
+  clearedImage = false; // user explicitly cleared the image
   submitting = false;
   error: string | null = null;
   // location/device controls
@@ -75,8 +90,12 @@ export class FaultAddDialogComponent {
   locations: any[] = [];
   filteredLocations: any[] = [];
   filteredDevices: any[] = [];
+  // edit-mode
+  editMode = false;
+  faultId: number | null = null;
+  selectedStatus: string | null = null;
 
-  constructor(public dialogRef: MatDialogRef<FaultAddDialogComponent>, @Inject(MAT_DIALOG_DATA) public data: any, private http: HttpClient, private auth: AuthService) {
+  constructor(public dialogRef: MatDialogRef<FaultAddDialogComponent>, @Inject(MAT_DIALOG_DATA) public data: any, private http: HttpClient, private auth: AuthService, private cdr: ChangeDetectorRef) {
     this.loadLocations();
     // watch input changes for client-side filtering
     this.locationCtrl.valueChanges.subscribe(v => {
@@ -98,6 +117,16 @@ export class FaultAddDialogComponent {
       const q = (v && typeof v === 'object' && 'name' in v) ? (v as any).name : (v || '');
       this.filteredDevices = this.devices.filter(d => String(d.name).toLowerCase().includes(String(q).toLowerCase()));
     });
+
+    // if data contains id -> edit mode
+    try {
+      if (this.data && this.data.id) {
+        this.editMode = true;
+        this.faultId = Number(this.data.id);
+        // load the fault details
+        this.loadForEdit(this.faultId);
+      }
+    } catch (e) {}
   }
   submittedAttempt = false;
 
@@ -116,18 +145,57 @@ export class FaultAddDialogComponent {
   loadLocations(){
     const token = this.getToken();
     const selected = this.auth.getSelectedSchool();
-    if (!selected) return;
+    if (!selected) return Promise.resolve();
     const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
     const locUrl = `${apiBase}/api/locations?school_id=${selected.id}`;
     try { console.debug('FaultAddDialog.loadLocations selectedSchool:', selected, 'url:', locUrl); } catch(e) {}
-    this.http.get(locUrl, { headers, responseType: 'json' } as any).subscribe({ next: (d: any) => { this.locations = Array.isArray(d) ? d : []; this.filteredLocations = this.locations; }, error: (e: any) => console.error('load locations', e) });
+    return new Promise<void>((resolve) => {
+      this.http.get(locUrl, { headers, responseType: 'json' } as any).subscribe({ next: (d: any) => { this.locations = Array.isArray(d) ? d : []; this.filteredLocations = this.locations; resolve(); }, error: (e: any) => { console.error('load locations', e); this.locations = []; this.filteredLocations = []; resolve(); } });
+    });
+  }
+
+  async loadForEdit(id: number) {
+    const token = this.getToken();
+    const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
+    try {
+      const res: any = await this.http.get(`${apiBase}/api/faults/${id}`, { headers } as any).toPromise();
+      const f = res.fault; if (!f) return;
+      // populate visible fields (read-only for most) and status
+      this.issueDetails = f.issue_details || '';
+      this.imagePath = f.image || null;
+      // if an existing image path is present, create a preview URL to show it
+      if (this.imagePath) {
+        try {
+          // backend returns relative path like 'uploads/faults/images/filename'
+          this.imagePreviewUrl = (this.imagePath && String(this.imagePath).startsWith('http')) ? this.imagePath : `${apiBase}/${this.imagePath}`;
+        } catch (e) {}
+      }
+      this.selectedStatus = f.status || 'open';
+      // ensure locations loaded
+      await this.loadLocations();
+      if (f.Device && f.Device.Location) {
+        this.selectedLocation = f.Device.Location;
+      } else if (f.location_id) {
+        this.selectedLocation = this.locations.find((l:any)=>Number(l.id)===Number(f.location_id)) || null;
+      }
+      // set location control so autocomplete shows the selection
+      try { this.locationCtrl.setValue(this.selectedLocation); } catch(e){}
+      // load devices for selected location
+      await this.onLocationSelected(this.selectedLocation);
+      this.deviceId = f.Device && f.Device.id ? f.Device.id : (f.device_id || null);
+      if (this.deviceId) {
+        const devObj = this.devices.find((d:any)=>Number(d.id)===Number(this.deviceId)) || null;
+        try { this.deviceCtrl.setValue(devObj || ''); } catch(e){}
+      }
+      try { this.cdr.detectChanges(); } catch(e){}
+    } catch (e) { console.error('loadForEdit', e); }
   }
 
   onLocationSelected(loc: any){
     // when a location is chosen, re-load devices for that location and set selectedLocation
     const token = this.getToken();
     const selected = this.auth.getSelectedSchool();
-    if (!selected) return;
+    if (!selected) return Promise.resolve();
     const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
     const lid = loc && loc.id ? loc.id : null;
     // set selected location and clear any previously selected device
@@ -136,7 +204,9 @@ export class FaultAddDialogComponent {
     let url = `${apiBase}/api/devices?school_id=${selected.id}`;
     if (lid) url += `&location_id=${lid}`;
     try { console.debug('FaultAddDialog.onLocationSelected selectedSchool:', selected, 'locationId:', lid, 'url:', url); } catch(e) {}
-    this.http.get(url, { headers, responseType: 'json' } as any).subscribe({ next: (d: any) => { this.devices = d || []; this.filteredDevices = this.devices; }, error: (e:any) => { console.error('load devices by location', e); this.devices = []; this.filteredDevices = []; } });
+    return new Promise<void>((resolve) => {
+      this.http.get(url, { headers, responseType: 'json' } as any).subscribe({ next: (d: any) => { this.devices = d || []; this.filteredDevices = this.devices; resolve(); }, error: (e:any) => { console.error('load devices by location', e); this.devices = []; this.filteredDevices = []; resolve(); } });
+    });
   }
 
   onDeviceSelected(dev: any){
@@ -166,17 +236,22 @@ export class FaultAddDialogComponent {
   async onFileChange(ev: any) {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
     // revoke previous preview if any
-    if (this.imagePreviewUrl) { URL.revokeObjectURL(this.imagePreviewUrl); this.imagePreviewUrl = null; }
+    if (this.imagePreviewUrl) { try { URL.revokeObjectURL(this.imagePreviewUrl); } catch(e){} this.imagePreviewUrl = null; }
+    this.selectedFile = f;
+    this.clearedImage = false; // user selected a new file
     this.imagePreviewUrl = URL.createObjectURL(f);
-    this.uploading = true; this.error = null;
-    try {
-      const fd = new FormData(); fd.append('file', f);
-      const token = this.getToken(); const headers: any = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res: any = await this.http.post(`${apiBase}/api/upload/fault-image`, fd, { headers }).toPromise();
-      if (res && res.path) this.imagePath = res.path;
-    } catch (err:any) { console.error('upload error', err); this.error = err?.error?.message || err?.message || 'Yükleme hatası'; }
-    finally { this.uploading = false; }
+    // do not upload here; upload will happen on submit
+  }
+
+  clearImage(ev?: Event) {
+    if (ev) ev.stopPropagation();
+    // revoke preview if it was a blob
+    try { if (this.imagePreviewUrl && this.imagePreviewUrl.startsWith('blob:')) URL.revokeObjectURL(this.imagePreviewUrl); } catch (e) {}
+    this.selectedFile = null;
+    this.imagePreviewUrl = null;
+    this.clearedImage = true;
+    // keep imagePath so we know what to delete on submit; UI hides preview immediately
+    this.cdr.detectChanges();
   }
 
   onCancel(){ this.dialogRef.close(null); }
@@ -184,7 +259,7 @@ export class FaultAddDialogComponent {
   // ensure we free the object URL when dialog closed
   ngOnDestroy(){ if (this.imagePreviewUrl) { try { URL.revokeObjectURL(this.imagePreviewUrl); } catch(e){} this.imagePreviewUrl = null; } }
 
-  onSubmit(){
+  async onSubmit(){
     this.submittedAttempt = true;
     const selected = this.auth.getSelectedSchool();
     if (!selected) { this.error = 'Okul seçimi gerekli.'; return; }
@@ -196,10 +271,52 @@ export class FaultAddDialogComponent {
       return;
     }
     this.submitting = true; this.error = null;
-    const payload: any = { school_id: selected.id, device_id: this.deviceId || null, issue_details: this.issueDetails, image: this.imagePath || null };
+    const token = this.getToken(); const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }) : new HttpHeaders({ 'Content-Type': 'application/json' });
+
+    // If a file was selected, upload it first and get the path
+    let newImagePath: string | null = this.imagePath || null;
+    if (this.selectedFile) {
+      this.uploading = true; this.error = null;
+      try {
+        const fd = new FormData(); fd.append('file', this.selectedFile);
+        const authHeaders: any = {};
+        if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+        const res: any = await this.http.post(`${apiBase}/api/upload/fault-image`, fd, { headers: authHeaders }).toPromise();
+        if (res && res.path) newImagePath = res.path;
+      } catch (err:any) { console.error('upload error', err); this.error = err?.error?.message || err?.message || 'Yükleme hatası'; this.submitting = false; this.uploading = false; return; }
+      finally { this.uploading = false; }
+    }
+
+  // If the user explicitly cleared the image during edit, ensure we send null
+  if (this.clearedImage) newImagePath = null;
+
+    if (this.editMode && this.faultId) {
+      // Send full PATCH payload to update multiple fields
+      const payload: any = {};
+      if (this.selectedLocation && this.selectedLocation.id) payload.location_id = this.selectedLocation.id;
+      payload.device_id = this.deviceId || null;
+      payload.issue_details = this.issueDetails || '';
+      payload.image = newImagePath || null;
+      if (this.selectedStatus) payload.status = this.selectedStatus;
+      try {
+        const oldImage = this.imagePath || null;
+        await this.http.patch(`${apiBase}/api/faults/${this.faultId}`, payload, { headers }).toPromise();
+        // if old image exists and newImagePath is different, request deletion of old file
+        if (oldImage && newImagePath && oldImage !== newImagePath) {
+          try { await this.http.request('delete', `${apiBase}/api/upload/fault-image`, { body: { path: oldImage }, headers }).toPromise(); } catch(e) { console.warn('failed to delete old image', e); }
+        }
+        // if user cleared the image, delete old image from server
+        if (this.clearedImage && oldImage) {
+          try { await this.http.request('delete', `${apiBase}/api/upload/fault-image`, { body: { path: oldImage }, headers }).toPromise(); } catch(e) { console.warn('failed to delete cleared image', e); }
+        }
+        this.submitting = false; this.dialogRef.close('updated');
+      } catch (e:any) { console.error('update fault', e); this.error = e?.error?.message || 'Güncelleme hatası'; this.submitting = false; }
+      return;
+    }
+
+    const payload: any = { school_id: selected.id, device_id: this.deviceId || null, issue_details: this.issueDetails, image: newImagePath || null };
     if (this.selectedLocation && this.selectedLocation.id) payload.location_id = this.selectedLocation.id;
     try { console.debug('FaultAddDialog.onSubmit payload:', payload); } catch(e) {}
-    const token = this.getToken(); const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }) : new HttpHeaders({ 'Content-Type': 'application/json' });
     this.http.post(`${apiBase}/api/faults`, payload, { headers }).subscribe({ next: () => { this.submitting = false; this.dialogRef.close('created'); }, error: e => { console.error('create fault', e); this.error = e?.error?.message || 'Kayıt hatası'; this.submitting = false; } });
   }
 }

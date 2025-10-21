@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { FaultImageDialogComponent } from '../fault-image-dialog/fault-image-dialog.component';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -35,15 +36,6 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
           </h1>
         </div>
         <div style="display:flex; gap:0.5rem; align-items:center;">
-          <button mat-stroked-button color="warn" (click)="bulkDelete()" [disabled]="selectedIds.length===0">Seçilenleri Sil</button>
-          <mat-form-field appearance="outline" style="width:160px; margin-left:0.5rem;">
-            <mat-select placeholder="Toplu Durum" (selectionChange)="bulkChangeStatus($event.value)">
-              <mat-option [value]="''">Durum seç</mat-option>
-              <mat-option value="open">Açık</mat-option>
-              <mat-option value="in_progress">İşlemde</mat-option>
-              <mat-option value="closed">Kapandı</mat-option>
-            </mat-select>
-          </mat-form-field>
           <button mat-raised-button color="primary" (click)="openAddDialog()" class="add-btn">
             <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
             Destek Talebi Ekle
@@ -58,20 +50,36 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
 
         <div class="table-header">
           <h2><mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon> Destek Talepleri Listesi</h2>
-          <div class="filters" style="display:flex; gap:1rem; align-items:center;">
-            <mat-form-field appearance="outline" style="width:280px;">
-              <input matInput placeholder="Ara (detay)" [(ngModel)]="filters.search" (keyup.enter)="onSearch()">
-            </mat-form-field>
-            <mat-form-field appearance="outline" style="width:180px;">
-              <mat-select placeholder="Durum" [(value)]="filters.status" (selectionChange)="onFilterChange()">
-                <mat-option [value]="">Tümü</mat-option>
-                <mat-option value="open">Açık</mat-option>
-                <mat-option value="in_progress">İşlemde</mat-option>
-                <mat-option value="closed">Kapandı</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <button mat-button (click)="onSearch()">Filtrele</button>
-          </div>
+        </div>
+
+        <div class="table-controls" style="padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+          <mat-form-field appearance="outline" style="width:280px;">
+            <input matInput placeholder="Ara (detay)" [(ngModel)]="filters.search" (ngModelChange)="onSearchChange($event)">
+          </mat-form-field>
+          <mat-form-field appearance="outline" style="width:180px;">
+            <mat-select placeholder="Durum" [(value)]="filters.status" (selectionChange)="onFilterChange()">
+              <mat-option [value]="">Tümü</mat-option>
+              <mat-option value="open">Açık</mat-option>
+              <mat-option value="in_progress">İşlemde</mat-option>
+              <mat-option value="closed">Kapandı</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" style="width:220px;">
+            <mat-select placeholder="Oluşturan" [(value)]="filters.creator" (selectionChange)="onCreatorChange()">
+              <mat-option [value]="null">Tümü</mat-option>
+              <mat-option *ngFor="let c of creators" [value]="c.id">{{c.name}}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <div style="flex:1 1 auto"></div>
+          <mat-form-field appearance="outline" style="width:160px; margin-left:0.25rem;">
+            <mat-select placeholder="Durum Değiştir" (selectionChange)="bulkChangeStatus($event.value)">
+              <mat-option [value]="''">Durum seç</mat-option>
+              <mat-option value="open">Açık</mat-option>
+              <mat-option value="in_progress">İşlemde</mat-option>
+              <mat-option value="closed">Kapandı</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-stroked-button color="warn" (click)="bulkDelete()" [disabled]="selectedIds.length===0" style="margin-left:12px">Seçilenleri Sil</button>
         </div>
 
         <div class="table-container">
@@ -88,6 +96,7 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
                 <th style="padding:8px;">Demirbaş</th>
                 <th style="padding:8px;">Oluşturan</th>
                 <th style="padding:8px;">Tarih</th>
+                <th style="padding:8px;">Düzenle</th>
                 <th style="padding:8px;">İşlem</th>
               </tr>
             </thead>
@@ -99,7 +108,7 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
                 </td>
                 <td style="padding:8px;">{{ f.issue_details && f.issue_details.length > 50 ? (f.issue_details | slice:0:50) + '...' : f.issue_details }}</td>
                 <td style="padding:8px;">{{ statusLabel(f.status) }}</td>
-                <td style="padding:8px;"> <a *ngIf="f.image" [href]="'/' + f.image" target="_blank">Göster</a> </td>
+                <td style="padding:8px;"> <button mat-button *ngIf="f.image" (click)="openImage(f, $event)">Göster</button> </td>
                 <td style="padding:8px;">{{ f.Location?.name || f.location?.name || f.location_name || '' }}<span *ngIf="(f.Location?.room_number || f.location?.room_number)"> (Oda: {{f.Location?.room_number || f.location?.room_number}})</span></td>
                 <td style="padding:8px;">{{ f.Device?.name || f.device?.name || f.device_name || '' }}</td>
                 <td style="padding:8px;">{{ f.User?.name || f.User?.username || f.user?.name || f.user?.username || f.user_id }}</td>
@@ -108,6 +117,9 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
                   <button mat-icon-button color="primary" (click)="openEdit(f, $event)" aria-label="Düzenle">
                     <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
                   </button>
+                </td>
+                <td style="padding:8px; width:120px; text-align:center;">
+                  <button mat-stroked-button color="accent" (click)="onActionClick(f, $event)">İşlem Yap</button>
                 </td>
               </tr>
             </tbody>
@@ -146,7 +158,11 @@ export class FaultListComponent implements OnInit {
   isLoading = false;
   sort: { field: string | null, dir: 'asc' | 'desc' } = { field: null, dir: 'asc' };
   pageIndex = 0; pageSize = 20; totalPages = 0; totalCount = 0;
-  filters: { search: string, status: string } = { search: '', status: '' };
+  filters: { search: string, status: string, creator: number | null } = { search: '', status: '', creator: null };
+  creators: Array<{ id: number | null, name: string }> = [];
+  // displayList is the currently filtered list used for pagination
+  displayList: any[] = [];
+  private searchTimeout: any = null;
 
   private schoolSub: any;
 
@@ -218,14 +234,56 @@ export class FaultListComponent implements OnInit {
       this.faults = data.faults || [];
       this.totalCount = data.total || 0;
       this.totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
-      this.pagedFaults = this.faults;
+      // Build creators list from fetched faults (unique)
+      const map: { [k: string]: { id: number|null, name: string } } = {};
+      for (const f of this.faults) {
+        const uid = f.User?.id || f.user_id || null;
+        const uname = (f.User && (f.User.name || f.User.username)) || f.user_name || (f.user && (f.user.name || f.user.username)) || String(uid);
+        const key = uid !== null ? String(uid) : `null_${uname}`;
+        if (!map[key]) map[key] = { id: uid, name: uname };
+      }
+  this.creators = Object.keys(map).map(k => ({ id: map[k].id as number | null, name: map[k].name }));
+      // apply filters and grouping
+  this.applyFilters();
       this.isLoading=false; this.cdr.detectChanges();
     }, error: (e: any) => { console.error('load faults', e); this.isLoading=false; this.cdr.detectChanges(); } });
   }
 
+  onCreatorChange() {
+    this.pageIndex = 0;
+    // apply client-side filtering immediately
+    this.applyFilters();
+  }
+
+  applyFilters() {
+    // Apply search and status filters first
+    let list = (this.faults || []).filter(f => {
+      if (this.filters.search && this.filters.search.trim().length > 0) {
+        const q = String(this.filters.search).toLowerCase();
+        if (!(String(f.issue_details || '').toLowerCase().includes(q))) return false;
+      }
+      if (this.filters.status && String(this.filters.status).length > 0) {
+        if ((f.status || '') !== this.filters.status) return false;
+      }
+      if (this.filters.creator) {
+        const cid = Number(this.filters.creator);
+        const fid = f.User?.id || f.user_id || null;
+        if (Number(fid) !== cid) return false;
+      }
+      return true;
+    });
+
+    // No grouping: set display list and pagination based on filtered results
+    this.displayList = list;
+    this.pagedFaults = list;
+    this.totalCount = list.length;
+    this.totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
+    this.updatePagedData();
+  }
+
   openAddDialog(){
     const ref = this.dialog.open(FaultAddDialogComponent, { width: '600px' });
-    ref.afterClosed().subscribe(r => { if (r === 'created') this.loadFaults(); });
+    ref.afterClosed().subscribe(r => { if (r) this.loadFaults(); });
   }
 
   onRowClick(ev: Event, f: any) {
@@ -240,16 +298,33 @@ export class FaultListComponent implements OnInit {
   async openEdit(f: any, ev?: Event) {
     if (ev) ev.stopPropagation();
     // open as dialog for quicker edit UX using dynamic import so the component
-    // doesn't need to be statically listed in `imports` (avoids NG8113).
+      // doesn't need to be statically listed in `imports` (avoids NG8113).
+      try {
+        const m = await import('../fault-add-dialog/fault-add-dialog.component');
+        const Comp = m.FaultAddDialogComponent;
+        const ref = this.dialog.open(Comp, { width: '720px', data: { id: f.id } });
+  ref.afterClosed().subscribe((r: any) => { if (r) this.loadFaults(); });
+      } catch (e) {
+        // fallback to route-based navigation if dialog open fails
+        try { console.error('openEdit dialog error', e); } catch (er) {}
+        try { alert('Düzenleme penceresi açılamadı, detay sayfasına yönlendiriliyorsunuz. Hata: ' + String(e)); } catch (er) {}
+        this.router.navigate(['/faults', f.id]);
+      }
+  }
+
+  openImage(f: any, ev?: Event) {
+    if (ev) ev.stopPropagation();
     try {
-      const m = await import('../fault-detail/fault-detail.component');
-      const Comp = m.FaultDetailComponent;
-      const ref = this.dialog.open(Comp, { width: '720px', data: { id: f.id } });
-      ref.afterClosed().subscribe((r: any) => { if (r === 'updated' || r === 'deleted') this.loadFaults(); });
-    } catch (e) {
-      // fallback to route-based navigation if dialog open fails
+      this.dialog.open(FaultImageDialogComponent, { width: '80%', maxWidth: '900px', data: { path: f.image } });
+    } catch (e) { console.error('open image dialog', e); }
+  }
+
+  onActionClick(f: any, ev?: Event) {
+    if (ev) ev.stopPropagation();
+    try {
+      // navigate to the fault detail page (keeps behavior simple and consistent)
       this.router.navigate(['/faults', f.id]);
-    }
+    } catch (e) { console.error('onActionClick error', e); }
   }
 
   ngOnDestroy(): void {
@@ -259,12 +334,28 @@ export class FaultListComponent implements OnInit {
   prevPage(){ if (this.pageIndex>0) { this.pageIndex--; this.loadFaults(); } }
   nextPage(){ if ((this.pageIndex+1) < this.totalPages) { this.pageIndex++; this.loadFaults(); } }
 
-  private updatePagedData(){ this.totalPages = Math.max(1, Math.ceil(this.faults.length / this.pageSize)); const start = this.pageIndex * this.pageSize; this.pagedFaults = this.faults.slice(start, start + this.pageSize); }
+  private updatePagedData(){
+    const source = (this.displayList && this.displayList.length ? this.displayList : this.faults);
+    this.totalPages = Math.max(1, Math.ceil((source || []).length / this.pageSize));
+    const start = this.pageIndex * this.pageSize;
+    this.pagedFaults = (source || []).slice(start, start + this.pageSize);
+  }
 
   onHeaderClick(field: string){ if (this.sort.field === field) this.sort.dir = this.sort.dir === 'asc' ? 'desc' : 'asc'; else { this.sort.field = field; this.sort.dir = 'asc'; } this.applySort(); this.pageIndex = 0; this.updatePagedData(); }
 
   onSearch(){ this.pageIndex = 0; this.loadFaults(); }
   onFilterChange(){ this.pageIndex = 0; this.loadFaults(); }
+
+  onSearchChange(value: string) {
+    // immediate feedback: debounce to avoid spamming the server while typing
+    this.filters.search = value;
+    this.pageIndex = 0;
+    if (this.searchTimeout) clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => {
+      this.loadFaults();
+      this.searchTimeout = null;
+    }, 250);
+  }
 
   private applySort(){ if (!this.sort.field) return; const f = this.sort.field; this.faults.sort((a,b) => { const av = (a[f] ?? '') + ''; const bv = (b[f] ?? '') + ''; if (av === bv) return 0; const cmp = av > bv ? 1 : -1; return this.sort.dir === 'asc' ? cmp : -cmp; }); }
 
