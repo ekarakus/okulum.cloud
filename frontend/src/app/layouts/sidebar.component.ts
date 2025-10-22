@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { SidebarService } from './sidebar.service';
 import { AuthService } from '../services/auth.service';
 import { PermissionService } from '../services/permission.service';
+import { ChangeDetectorRef } from '@angular/core';
 
 @Component({
   selector: 'app-sidebar',
@@ -140,9 +141,15 @@ export class SidebarComponent {
   'faults': 'Destek Talepleri'
   };
 
-  constructor(private svc: SidebarService, public auth: AuthService, private router: Router, private permission: PermissionService) {
+  constructor(private svc: SidebarService, public auth: AuthService, private router: Router, private permission: PermissionService, private cdr: ChangeDetectorRef) {
     // initialize collapsed state from service
     this.svc.collapsed$.subscribe(v => this.collapsed = v);
+    // keep sidebar reactive to permission/user changes which may arrive asynchronously
+    try {
+      this.auth.currentUser$.subscribe(u => {
+        try { this.cdr.detectChanges(); } catch(e){}
+      });
+    } catch(e) {}
   }
   toggle() { this.svc.toggle(); }
   // Use AuthService to determine super admin status (safer and reactive)
@@ -152,7 +159,6 @@ export class SidebarComponent {
     if(this.isSuperAdmin()) return true;
     const perm = this.permMap[key] || key;
     const allowed = this.permission.hasPermission(perm);
-    console.debug(`Sidebar.canSee -> key=${key} perm=${perm} allowed=${allowed}`);
     return allowed;
   }
   // Group visibility helpers: return true if at least one child item is visible
@@ -164,7 +170,9 @@ export class SidebarComponent {
   }
   showAssetGroup(): boolean {
     // include super-admin-only sublinks (device-types, operation-types, features) as visible when user is super admin
-    return this.canSee('devices') || this.isSuperAdmin() || this.canSee('operations') || this.canSee('technicians') || this.canSee('locations') || this.canSee('reports');
+    // Also include 'faults' here so the Demirbaş group is shown when the user has only
+    // the "Destek Talepleri" permission.
+    return this.canSee('devices') || this.isSuperAdmin() || this.canSee('operations') || this.canSee('technicians') || this.canSee('locations') || this.canSee('reports') || this.canSee('faults');
   }
   logout(){
     try{ this.auth.logout(); }catch(e){}

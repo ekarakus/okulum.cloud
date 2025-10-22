@@ -93,6 +93,10 @@ app.use('/api/global-settings', globalSettingRouter);
 const permissionRouter = require('./routes/permissionRoutes');
 app.use('/api/permissions', permissionRouter);
 
+// Admin utility routes
+const adminRouter = require('./routes/adminRoutes');
+app.use('/api/admin', adminRouter);
+
 // User permissions per user-school
 const userPermissionRouter = require('./routes/userPermissionRoutes');
 app.use('/api/user-permissions', userPermissionRouter);

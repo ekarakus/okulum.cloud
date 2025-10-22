@@ -8,6 +8,18 @@ export class PermissionService {
   // Robust permission check: super_admin -> always true.
   // Otherwise expect user to have `permissions` array (strings) or `permissionsMap` object.
   hasPermission(permissionName: string): boolean {
+    // If the client is currently fetching consolidated permissions from the server,
+    // treat the state as "unknown" for UI rendering. Returning TRUE here causes
+    // UI (sidebar) to render every menu item while the server request is in-flight
+    // which creates the flicker (show everything then remove). Instead, we return
+    // FALSE so the UI doesn't show items prematurely. Route guards will explicitly
+    // allow navigation during fetch by checking AuthService.isFetchingPermissions().
+      try {
+        // @ts-ignore internal flag accessor
+        if ((this.auth as any).isFetchingPermissions && (this.auth as any).isFetchingPermissions()) {
+          return false;
+        }
+      } catch (e) {}
     const user = this.auth.getCurrentUser();
     if (!user) return false;
     // Super admin bypass
@@ -28,14 +40,34 @@ export class PermissionService {
 
     // permissions array (strings or objects)
     const anyPerms: any = (user as any).permissions || (user as any).Permissions;
+    // If auth produced a normalized lookup, use it for fastest, deterministic checks
+    const lookup: any = (user as any).permissionsLookup || (user as any).permissionsMap || (user as any).PermissionsMap;
+    if (lookup && typeof lookup === 'object') {
+      const key = normalize(permissionName);
+      if (lookup[key]) return true;
+    }
     if (Array.isArray(anyPerms)) {
-      return anyPerms.some((p: any) => {
-        if (p == null) return false;
-        if (typeof p === 'string') return normalize(p) === target;
-        // object permission: try common fields
-        const candidate = p.name || p.permission || p.key || p.slug || p.label || p.title;
-        return normalize(candidate) === target;
-      });
+      // Build a normalized list and perform tolerant matching. Some backends
+      // store slightly different strings (extra whitespace, punctuation, suffixes).
+      try {
+        const normalizedList = anyPerms.map((p: any) => {
+          if (p == null) return '';
+          if (typeof p === 'string') return normalize(p);
+          const candidate = p.name || p.permission || p.key || p.slug || p.label || p.title || JSON.stringify(p);
+          return normalize(candidate);
+        }).filter((s: string) => !!s);
+
+        // exact match or substring match to tolerate minor backend differences
+        for (const np of normalizedList) {
+          if (np === target) return true;
+          if (np.includes(target) || target.includes(np)) return true;
+        }
+
+        
+        return false;
+      } catch (e) {
+        return false;
+      }
     }
 
     // permissions map/object where keys may be permission names
@@ -56,18 +88,7 @@ export class PermissionService {
     }
 
     // --- If we reached here, permission not found. Emit debug info to help troubleshooting ---
-    try {
-      // eslint-disable-next-line no-console
-      console.debug('PermissionService.hasPermission: permission not matched', {
-        requested: permissionName,
-        normalizedRequested: target,
-        userPreview: { id: (user as any).id, role: (user as any).role },
-        anyPerms: (user as any).permissions || (user as any).Permissions,
-        permMap: (user as any).permissionsMap || (user as any).permissions_obj || (user as any).PermissionsMap,
-        bySchool: (user as any).permissions_by_school || (user as any).permissionsBySchool || (user as any).school_permissions,
-        schools: (user as any).schools || (user as any).Schools
-      });
-    } catch(e) {}
+        
 
     // --- School-scoped permission checks ---
     // Many backends attach school-specific permissions either as:

@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { PermissionService } from '../services/permission.service';
+import { AuthService } from '../services/auth.service';
 
 export const PermissionGuard: CanActivateFn = (route, state) => {
   const permissionService = inject(PermissionService);
@@ -12,6 +13,18 @@ export const PermissionGuard: CanActivateFn = (route, state) => {
     // If no permission declared, allow by default
     return true;
   }
+
+  // If the auth service is still fetching consolidated permissions, allow
+  // navigation to proceed to avoid blocking the user immediately after login.
+  // The UI (sidebar) will not show items while permissions are unknown because
+  // PermissionService.hasPermission returns false during fetch.
+  try {
+    const auth = inject(AuthService);
+    if ((auth as any).isFetchingPermissions && (auth as any).isFetchingPermissions()) {
+      // allow while fetching; application routes/components can re-check permissions
+      return true;
+    }
+  } catch (e) {}
 
   const allowed = permissionService.hasPermission(permission as string);
   if (allowed) return true;

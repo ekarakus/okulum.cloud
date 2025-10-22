@@ -20,7 +20,7 @@ import { MatSelectModule } from '@angular/material/select';
   template: `
     <h2 mat-dialog-title>{{ editMode ? 'Destek Talebi Düzenle' : 'Yeni Destek Talebi' }}</h2>
   <mat-dialog-content class="dialog-content">
-      <div style="display:flex; flex-direction:column; gap:8px; min-width:360px;">
+  <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
         <mat-form-field appearance="outline">
           <mat-label>Lokasyon (zorunlu)</mat-label>
           <input type="text" matInput [formControl]="locationCtrl" [matAutocomplete]="locAuto" placeholder="Lokasyon ara veya seç">

@@ -2,12 +2,13 @@ import { Component, ChangeDetectorRef } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -20,7 +21,8 @@ import { AuthService } from '../services/auth.service';
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatDialogModule
   ],
   template: `
     <div class="login-container">
@@ -225,12 +227,16 @@ export class LoginComponent {
   isLoading = false;
   // start with an absolute path; if it 404s we'll fall back to an embedded data URL
   logoSrc = '/odys-logo.png';
+  // return URL captured when guard redirected to login (e.g. /faults)
+  returnUrl: string | null = null;
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private snackBar: MatSnackBar,
+    private dialog: MatDialog,
     private cdr: ChangeDetectorRef,
     private title: Title
   ) {
@@ -279,37 +285,48 @@ export class LoginComponent {
       // if require fails in the browser or environment not available, ignore
       console.warn('Google Sign-In init failed', e);
     }
+    // capture returnUrl from query params if present
+    try {
+      const q = (this.route && this.route.snapshot && this.route.snapshot.queryParamMap) ? this.route.snapshot.queryParamMap.get('returnUrl') : null;
+      this.returnUrl = q || null;
+    } catch (e) { this.returnUrl = null; }
   }
 
   handleGoogleCredential(id_token: string) {
-    // Defer UI state changes to avoid ExpressionChangedAfterItHasBeenCheckedError
-    setTimeout(() => {
-      this.isLoading = true;
-    }, 0);
+    // Set loading state synchronously and run change detection
+    this.isLoading = true;
+    try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
 
     console.log('Sending id_token to backend (truncated):', id_token ? id_token.substring(0, 40) + '...' : id_token);
+    // Call backend first. Only show the provisioning success modal if the backend reports a newly created user.
     this.authService.loginWithGoogle(id_token).subscribe({
       next: (response) => {
-        // Defer to next tick so change detection stabilizes
-        setTimeout(() => {
-          this.isLoading = false;
-          this.snackBar.open('Google ile giriş başarılı! Yönlendiriliyorsunuz...', 'Tamam', {
-            duration: 2000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top',
-            panelClass: ['success-snackbar']
-          });
-          setTimeout(() => this.router.navigate(['/dashboard']), 800);
-        }, 0);
+        // Turn off loading
+        this.isLoading = false;
+        try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
+
+  const redirect = this.returnUrl || (response as any)?.redirect || '/faults';
+        const created = !!(response as any)?.created;
+        const emailSent = !!(response as any)?.email_sent;
+
+        if (created) {
+          // show success modal for newly created accounts
+          this.dialog.open(ProvisioningSuccessDialog, { data: { email: (response as any)?.user?.email || '', redirect, created, emailSent } });
+          // navigate after brief pause so user sees success
+          setTimeout(() => this.router.navigateByUrl(redirect), 2000);
+        } else {
+          // existing user: just navigate without showing provisioning modal
+          this.router.navigateByUrl(redirect);
+        }
       },
       error: (err) => {
-        setTimeout(() => {
-          this.isLoading = false;
-          let msg = 'Google ile giriş başarısız oldu.';
-          if (err.status === 404) msg = 'Google hesabınız sistemde kayıtlı değil.';
-          if (err.status === 403) msg = 'Hesabınız aktif değil veya okulu atanmamış.';
-          this.snackBar.open(msg, 'Tamam', { duration: 5000, panelClass: ['error-snackbar'] });
-        }, 0);
+        this.isLoading = false;
+        try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
+
+        let msg = 'Google ile giriş başarısız oldu.';
+        if (err.status === 404) msg = 'Google hesabınız sistemde kayıtlı değil.';
+        if (err.status === 403) msg = 'Hesabınız aktif değil veya okulu atanmamış.';
+        this.snackBar.open(msg, 'Tamam', { duration: 5000, panelClass: ['error-snackbar'] });
       }
     });
   }
@@ -344,7 +361,8 @@ export class LoginComponent {
 
               // Dashboard'a yönlendir
               setTimeout(() => {
-                this.router.navigate(['/dashboard']);
+                const target = this.returnUrl || '/dashboard';
+                this.router.navigateByUrl(target);
               }, 1000);
             }, 0);
           },
@@ -421,4 +439,45 @@ export class LoginComponent {
       }, 0);
     }
   }
+}
+
+// Small provisioning progress dialog
+import { Inject } from '@angular/core';
+
+@Component({
+  template: `
+    <div style="padding:1.5rem; text-align:center;">
+      <h3>Hesap oluşturuluyor</h3>
+      <mat-spinner diameter="40"></mat-spinner>
+      <p style="margin-top:1rem; color:#666;">Lütfen bekleyiniz — eğer email ayarları mevcutsa bilgilendirme emaili gönderilecektir.</p>
+    </div>
+  `,
+  standalone: true,
+  imports: [MatProgressSpinnerModule, CommonModule]
+})
+export class ProvisioningDialog {
+  constructor(@Inject(MAT_DIALOG_DATA) public data: any) {}
+}
+
+@Component({
+  template: `
+    <div style="padding:1.5rem; text-align:center;">
+      <h3 *ngIf="data.created; else exists">Hesabınız oluşturuldu</h3>
+      <ng-template #exists><h3>Giriş başarılı</h3></ng-template>
+      <p *ngIf="data.email">Hesap: <strong>{{data.email}}</strong></p>
+      <p *ngIf="data.created">Hesabınız oluşturuldu. Google hesabınızla giriş yapabilirsiniz.</p>
+      <p *ngIf="data.created && data.emailSent">Bilgilendirme e‑postası gönderildi.</p>
+      <p *ngIf="data.created && !data.emailSent">Hesap oluşturuldu ancak e‑posta gönderilemedi. Yöneticiyle iletişime geçin.</p>
+      <p *ngIf="!data.created">Yönlendiriliyorsunuz...</p>
+      <div style="margin-top:1.25rem;">
+        <button mat-stroked-button color="primary" (click)="close()">Kapat</button>
+      </div>
+    </div>
+  `,
+  standalone: true,
+  imports: [CommonModule, MatButtonModule]
+})
+export class ProvisioningSuccessDialog {
+  constructor(@Inject(MAT_DIALOG_DATA) public data: any, private dialogRef: MatDialogRef<ProvisioningSuccessDialog>) {}
+  close() { try { this.dialogRef.close(); } catch (e) { /* ignore */ } }
 }

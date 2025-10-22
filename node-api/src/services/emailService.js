@@ -71,8 +71,19 @@ async function sendMail({ to, subject, html, text }) {
     html: html || undefined
   };
   try {
-    return await attemptSend(transport, mailOptions);
+    const result = await attemptSend(transport, mailOptions);
+    // Best-effort logging
+    try {
+      const EmailLog = require('../models/relations').EmailLog;
+      await EmailLog.create({ to, subject, status: 'sent', meta: { messageId: result && result.messageId ? result.messageId : undefined } }).catch(()=>{});
+    } catch(e){/* swallow */}
+    return result;
   } catch (err) {
+    // Best-effort logging for failures
+    try {
+      const EmailLog = require('../models/relations').EmailLog;
+      await EmailLog.create({ to, subject, status: 'failed', error: err && err.message ? err.message : String(err) }).catch(()=>{});
+    } catch(e){/* swallow */}
     // TLS / version mismatch fallback
     if (err && err.code === 'ESOCKET' && /wrong version number/i.test(err.message || '')) {
       const settings = await GlobalSetting.findOne();
@@ -94,8 +105,10 @@ async function sendMail({ to, subject, html, text }) {
           // fallback başarılıysa cache güncelle
             cachedTransport = altTransport;
           cachedConfigHash = buildHash(cfg2) + ':fallback';
+          try { const EmailLog = require('../models/relations').EmailLog; await EmailLog.create({ to, subject, status: 'sent', meta: { fallback: true } }).catch(()=>{}); } catch(e){}
           return result;
         } catch (e2) {
+          try { const EmailLog = require('../models/relations').EmailLog; await EmailLog.create({ to, subject, status: 'failed', error: e2 && e2.message ? e2.message : String(e2) }).catch(()=>{}); } catch(e){}
           throw new Error('TLS/Port uyumsuzluğu ve otomatik düzeltme başarısız: ' + e2.message);
         }
       }

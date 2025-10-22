@@ -30,6 +30,9 @@ export interface User {
 export interface LoginResponse {
   token: string;
   user: User;
+  redirect?: string;
+  created?: boolean;
+  email_sent?: boolean;
 }
 
 @Injectable({
@@ -42,6 +45,8 @@ export class AuthService {
   private selectedSchool: School | null = null;
   private selectedSchoolSubject = new ReplaySubject<School | null>(1);
   public selectedSchool$ = this.selectedSchoolSubject.asObservable();
+  // flag set while the client is fetching consolidated permissions from the server
+  private fetchingPermissionsFlag = false;
 
   constructor(
     private http: HttpClient,
@@ -50,6 +55,9 @@ export class AuthService {
   ) {
     this.loadInitialState();
   }
+
+  // allow other services to check whether we're currently fetching permissions
+  isFetchingPermissions(): boolean { return this.fetchingPermissionsFlag; }
 
   login(email: string, password: string): Observable<LoginResponse> {
   return this.http.post<LoginResponse>(`${apiBase}/api/auth/login`, { email, password })
@@ -212,26 +220,45 @@ export class AuthService {
       // ignore fallback errors
     }
 
-    // If still no permissions, call backend consolidated endpoint to fetch them
+  // If still no permissions, call backend consolidated endpoint to fetch them
     try {
-      if ((!normalizedUser.permissions || normalizedUser.permissions.length === 0) && token) {
-        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-        // non-blocking request; ensure we update localStorage/currentUserSubject when response arrives
-        this.http.get(`${apiBase}/api/users/${normalizedUser.id}/permissions`, { headers }).subscribe({
-          next: (res: any) => {
-            try {
-              const perms = Array.isArray(res?.permissions) ? res.permissions.map((p: any) => String(p.name || p)) : [];
-              if (perms.length > 0) {
-                normalizedUser.permissions = Array.from(new Set(perms));
-                localStorage.setItem('user', JSON.stringify(normalizedUser));
-                this.currentUserSubject.next(normalizedUser);
-                try { console.debug('Auth.setAuthState fetched consolidated permissions', { perms }); } catch(e){}
-              }
-            } catch(e) { /* ignore */ }
-          },
-          error: (err) => { /* ignore fetch errors in auth setup */ }
-        });
-      }
+        if ((!normalizedUser.permissions || normalizedUser.permissions.length === 0) && token) {
+          const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+          // mark fetching flag so guards can allow navigation while permissions load
+          this.fetchingPermissionsFlag = true;
+          // non-blocking request; ensure we update localStorage/currentUserSubject when response arrives
+          this.http.get(`${apiBase}/api/users/${normalizedUser.id}/permissions`, { headers }).subscribe({
+            next: (res: any) => {
+              try {
+                const perms = Array.isArray(res?.permissions) ? res.permissions.map((p: any) => String(p.name || p)) : [];
+                // only update stored permissions if the fetched list is non-empty
+                // or if we currently have no permissions at all (avoid wiping good data)
+                const currentlyHas = Array.isArray(normalizedUser.permissions) && normalizedUser.permissions.length > 0;
+                if (perms.length > 0 || !currentlyHas) {
+                  if (perms.length > 0) {
+                    normalizedUser.permissions = Array.from(new Set(perms));
+                  }
+                  // also create a normalized lookup for fast permission checks
+                  try {
+                    const normalize = (s: any) => {
+                      if (s == null) return '';
+                      try { return String(s).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^a-z0-9]/g, ''); } catch(e) { return String(s).toLowerCase(); }
+                    };
+                    const normalizedKeys = (normalizedUser.permissions || []).map((p: any) => normalize(p));
+                    normalizedUser.permissionsLookup = normalizedKeys.reduce((acc: any, k: string) => { if(k) acc[k]=true; return acc; }, {} as any);
+                    normalizedUser.permissionsNormalized = normalizedKeys;
+                  } catch(e) {}
+
+                  localStorage.setItem('user', JSON.stringify(normalizedUser));
+                  this.currentUserSubject.next(normalizedUser);
+                  try { console.debug('Auth.setAuthState fetched consolidated permissions', { perms }); } catch(e){}
+                }
+              } catch(e) { /* ignore */ }
+              this.fetchingPermissionsFlag = false;
+            },
+            error: (err) => { this.fetchingPermissionsFlag = false; /* ignore fetch errors in auth setup */ }
+          });
+        }
     } catch(e) {}
   }
 
@@ -316,18 +343,21 @@ export class AuthService {
             try {
               if ((!parsed.permissions || parsed.permissions.length === 0) && token) {
                 const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+                this.fetchingPermissionsFlag = true;
                 this.http.get(`${apiBase}/api/users/${parsed.id}/permissions`, { headers }).subscribe({
                   next: (res: any) => {
-                    try {
-                      const perms = Array.isArray(res?.permissions) ? res.permissions.map((p: any) => String(p.name || p)) : [];
-                      if (perms.length > 0) {
-                        parsed.permissions = Array.from(new Set(perms));
-                        localStorage.setItem('user', JSON.stringify(parsed));
-                        this.currentUserSubject.next(parsed);
-                        try { console.debug('Auth.loadInitialState fetched consolidated permissions', { perms }); } catch(e){}
-                      }
-                    } catch(e) {}
-                  }, error: () => {}
+                      try {
+                        const perms = Array.isArray(res?.permissions) ? res.permissions.map((p: any) => String(p.name || p)) : [];
+                        const currentlyHas = Array.isArray(parsed.permissions) && parsed.permissions.length > 0;
+                        if (perms.length > 0 || !currentlyHas) {
+                          if (perms.length > 0) parsed.permissions = Array.from(new Set(perms));
+                          localStorage.setItem('user', JSON.stringify(parsed));
+                          this.currentUserSubject.next(parsed);
+                          try { console.debug('Auth.loadInitialState fetched consolidated permissions', { perms }); } catch(e){}
+                        }
+                      } catch(e) {}
+                      this.fetchingPermissionsFlag = false;
+                    }, error: () => { this.fetchingPermissionsFlag = false; }
                 });
               }
             } catch(e) {}

@@ -193,6 +193,34 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
     .sortable-header { padding: 8px; cursor: pointer; user-select: none; font-weight:600; color:#2c3e50; }
     .sortable-header mat-icon { vertical-align: middle; margin-left:6px; font-size:16px; color:#666 }
 
+    /* Mobile tweaks: reduce horizontal gaps and control heights inside .table-controls */
+    @media (max-width: 600px) {
+      .table-controls { gap: 0.45rem !important; padding: 8px !important; }
+      .table-controls .mat-form-field, .table-controls .mat-select, .table-controls .mat-form-field .mat-select-trigger {
+        height: 32px !important; min-height: 32px !important; align-items: center; display: inline-flex;
+      }
+      .table-controls .mat-form-field .mat-form-field-wrapper { height: 32px !important; }
+      .table-controls button.mat-stroked-button, .table-controls button.mat-raised-button, .table-controls button.mat-button {
+        height: 32px !important; line-height: 32px !important; min-height: 32px !important; padding: 0 8px !important; box-sizing: border-box;
+      }
+      .table-controls .mat-form-field-infix { padding: 0 8px !important; }
+      .google-delete-btn { gap: 6px; height: 32px !important; }
+      .google-delete-btn .google-icon { width:20px; height:20px; font-size:14px; }
+
+      /* Make form fields more compact and allow them to wrap neatly */
+      .table-controls mat-form-field { width: 100% !important; max-width: 260px; }
+      .table-controls { align-items: center; }
+      /* Mobile header font-size tweaks */
+      .header-left h1 { font-size: 1rem !important; }
+      .table-header h2 { font-size: 0.8rem !important; }
+    }
+
+    /* Hide MDC form-field subscript/bottom pseudo element specifically on this page */
+    .mat-mdc-form-field-subscript-wrapper,
+    .mat-mdc-form-field-bottom-align::before {
+      display: none !important;
+    }
+
   `]
 })
 
@@ -331,7 +359,7 @@ export class FaultListComponent implements OnInit {
   }
 
   openAddDialog(){
-    const ref = this.dialog.open(FaultAddDialogComponent, { width: '600px' });
+  const ref = this.dialog.open(FaultAddDialogComponent, { width: '90vw', maxWidth: '600px' });
     ref.afterClosed().subscribe(r => { if (r) this.loadFaults(); });
   }
 
@@ -351,7 +379,7 @@ export class FaultListComponent implements OnInit {
       try {
         const m = await import('../fault-add-dialog/fault-add-dialog.component');
         const Comp = m.FaultAddDialogComponent;
-        const ref = this.dialog.open(Comp, { width: '720px', data: { id: f.id } });
+  const ref = this.dialog.open(Comp, { width: '90vw', maxWidth: '720px', data: { id: f.id } });
   ref.afterClosed().subscribe((r: any) => { if (r) this.loadFaults(); });
       } catch (e) {
         // fallback to route-based navigation if dialog open fails
@@ -419,7 +447,7 @@ export class FaultListComponent implements OnInit {
       console.error('onActionClick error', e);
       // fallback: open the small operation create dialog if dynamic import fails
       try {
-        const ref = this.dialog.open(OperationCreateDialogComponent, { width: '520px', data: { fault: f } });
+  const ref = this.dialog.open(OperationCreateDialogComponent, { width: '90vw', maxWidth: '520px', data: { fault: f } });
         ref.afterClosed().subscribe((r: any) => { if (r) { /* noop, earlier flow handled */ } });
       } catch (err) { /* ignore */ }
     }

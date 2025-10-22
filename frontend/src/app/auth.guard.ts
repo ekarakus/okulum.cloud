@@ -16,7 +16,10 @@ export class AuthGuard implements CanActivate {
 
     // Token var mı kontrol et
     if (!this.authService.getToken()) {
-      this.router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
+      // Navigate directly to /auth/login instead of /login -> redirectTo /auth/login
+      // The /login redirect was dropping queryParams (returnUrl). Navigating to
+      // /auth/login preserves the returnUrl so the login component can read it.
+      this.router.navigate(['/auth/login'], { queryParams: { returnUrl: state.url } });
       return false;
     }
 

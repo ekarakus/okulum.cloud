@@ -26,6 +26,7 @@ const InfoNuggetCategory = require('./infoNuggetCategory');
 const InfoNugget = require('./infoNugget');
 const SchoolObservance = require('./schoolObservance');
 const FaultReport = require('./faultReport');
+const EmailLog = require('./emailLog');
 
 // İlişkiler
 Location.hasMany(Device, { foreignKey: 'location_id', as: 'Location' });
@@ -199,4 +200,5 @@ module.exports = {
   Student,
   SchoolObservance,
     FaultReport,
+    EmailLog,
 };
