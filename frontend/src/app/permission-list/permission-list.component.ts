@@ -6,6 +6,9 @@ import { apiBase } from '../runtime-config';
 import { Router } from '@angular/router';
 import { PermissionAddEditDialogComponent } from '../permission-add-edit-dialog/permission-add-edit-dialog.component';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
@@ -16,10 +19,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-permission-list',
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatTableModule, MatDialogModule, MatIconModule, MatMenuModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, MatFormFieldModule, MatInputModule, MatCardModule, MatButtonModule, MatTableModule, MatDialogModule, MatIconModule, MatMenuModule, MatTooltipModule],
   host: { 'ngSkipHydration': '' },
   template: `
     <div class="container">
+      <!-- Top-level header and actions (filters moved inside table card) -->
       <!-- Header -->
       <div class="header">
         <div class="header-left">
@@ -46,37 +50,60 @@ import { MatTooltipModule } from '@angular/material/tooltip';
           </h2>
           <div class="perm-count">Toplam Yetki: {{ permissions.length }}</div>
         </div>
+        <!-- Filters placed directly above the table headers for visibility -->
+        <div class="table-filters" style="padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:1rem; align-items:center;">
+          <mat-form-field appearance="outline" style="width:320px; margin:0;">
+            <input matInput placeholder="Ara (Yetki adı veya açıklama)" [(ngModel)]="filterText" (ngModelChange)="onFilterChange($event)">
+          </mat-form-field>
+          <div style="flex:1 1 auto"></div>
+        </div>
         <div class="table-container">
-          <table mat-table [dataSource]="permissions" class="permissions-table">
+          <table mat-table [dataSource]="pagedPermissions" class="permissions-table">
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Yetki Adı</th>
+              <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('name')" class="sortable">Yetki Adı
+                <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='name'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              </th>
               <td mat-cell *matCellDef="let p">{{p.name}}</td>
             </ng-container>
             <ng-container matColumnDef="description">
-              <th mat-header-cell *matHeaderCellDef>Açıklama</th>
+              <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick('description')" class="sortable">Açıklama
+                <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='description'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              </th>
               <td mat-cell *matCellDef="let p">{{p.description || '-'}}</td>
             </ng-container>
             <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef>İşlemler</th>
-              <td mat-cell *matCellDef="let p">
-                <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="İşlemler menüsü">
-                  <span class="material-symbols-outlined">more_vert</span>
+              <th mat-header-cell *matHeaderCellDef class="sortable">İşlemler
+                <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='actions'">swap_horiz</mat-icon>
+              </th>
+              <td mat-cell *matCellDef="let p" style="display:flex; gap:8px; align-items:center;">
+                <button mat-icon-button color="primary" aria-label="Düzenle" (click)="edit(p)" title="Düzenle">
+                  <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
                 </button>
-                <mat-menu #menu="matMenu">
-                  <button mat-menu-item (click)="edit(p)">
-                    <span class="material-symbols-outlined">edit</span>
-                    <span>Düzenle</span>
-                  </button>
-                  <button mat-menu-item (click)="remove(p)" style="color: #f44336;">
-                    <span class="material-symbols-outlined">delete</span>
-                    <span>Sil</span>
-                  </button>
-                </mat-menu>
+                <button mat-icon-button color="warn" aria-label="Sil" (click)="remove(p)" title="Sil">
+                  <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+                </button>
               </td>
             </ng-container>
-            <tr mat-header-row *matHeaderRowDef="['name','description','actions']"></tr>
+            <tr mat-header-row *matHeaderRowDef="['name','description','actions']" class="header-row"></tr>
             <tr mat-row *matRowDef="let row; columns: ['name','description','actions'];"></tr>
           </table>
+        </div>
+        <!-- Pagination controls -->
+        <div class="pagination-controls" style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-top:1px solid #eee; gap:12px;">
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button mat-button (click)="prevPage()" [disabled]="pageIndex<=0"><mat-icon fontSet="material-symbols-outlined">chevron_left</mat-icon> Önceki</button>
+            <button mat-button (click)="nextPage()" [disabled]="(pageIndex+1) >= totalPages">Sonraki <mat-icon fontSet="material-symbols-outlined">chevron_right</mat-icon></button>
+          </div>
+          <div style="display:flex; gap:12px; align-items:center; font-size:13px; color:#444;">
+            <div>Sayfa {{pageIndex+1}} / {{totalPages}} - Toplam: {{filteredPermissions.length}}</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label style="font-size:13px; color:#444;">Sayfa boyutu</label>
+              <select [(ngModel)]="pageSize" (change)="onPageSizeChange($event)" style="padding:6px; border-radius:4px; border:1px solid #ccc;">
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+              </select>
+            </div>
+          </div>
         </div>
       </mat-card>
     </div>
@@ -94,6 +121,15 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   .table-header .perm-count { font-weight: 600; color: rgba(0,0,0,0.75); }
     .table-container { overflow-x: auto; }
     .permissions-table { width: 100%; }
+
+  /* Filters placed above headers */
+  .table-filters { padding: 12px 16px; display:flex; align-items:center; gap:12px; }
+  .table-filters mat-form-field { margin: 0; }
+
+    /* Sortable header look */
+  .permissions-table th.mat-header-cell.sortable { cursor: pointer; user-select: none; font-weight: 700; color: #2c3e50; display:flex; align-items:center; gap:6px; }
+  .permissions-table th.mat-header-cell.sortable:hover { color: #1e88e5; }
+  .permissions-table th.mat-header-cell.sortable mat-icon { font-size:16px; color:#666; margin-left:4px; }
 
     /* Aggressive condensed table: very small padding and compact row height */
     .permissions-table .mat-header-cell, .permissions-table .mat-cell, .permissions-table th, .permissions-table td {
@@ -122,6 +158,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 })
 export class PermissionListComponent implements OnInit {
   permissions: any[] = [];
+  filteredPermissions: any[] = [];
+  pagedPermissions: any[] = [];
+  filterText: string = '';
+  sort: { field: string | null, dir: 'asc' | 'desc' } = { field: 'name', dir: 'asc' };
+  pageIndex = 0; pageSize = 25; totalPages = 1;
 
   constructor(private http: HttpClient, private dialog: MatDialog, private cdr: ChangeDetectorRef, private router: Router, @Inject(PLATFORM_ID) private platformId: Object) {}
 
@@ -135,8 +176,61 @@ export class PermissionListComponent implements OnInit {
     const token = this.getToken();
     if (!token) return;
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-    this.http.get<any[]>(`${apiBase}/api/permissions`, { headers }).subscribe({ next: d => { this.permissions = d; this.cdr.detectChanges(); }, error: e => console.error('Error loading permissions', e) });
+    this.http.get<any[]>(`${apiBase}/api/permissions`, { headers }).subscribe({
+      next: (d: any) => {
+        // Ensure we have an array (some APIs wrap results)
+        this.permissions = Array.isArray(d) ? d : (d && d.permissions) ? d.permissions : [];
+        this.pageIndex = 0;
+        // Populate filtered and paged arrays so the table shows immediately
+        this.applyFiltersAndSort();
+        this.cdr.detectChanges();
+      },
+      error: e => console.error('Error loading permissions', e)
+    });
   }
+
+  onFilterChange(_v?: any) {
+    this.pageIndex = 0;
+    this.applyFiltersAndSort();
+  }
+
+  onPageSizeChange(_e: any) {
+    this.pageIndex = 0;
+    this.applyFiltersAndSort();
+  }
+
+  private applyFiltersAndSort() {
+    // filter
+    this.filteredPermissions = (this.permissions || []).filter(p => {
+      if (!this.filterText || this.filterText.trim() === '') return true;
+      const q = this.filterText.toLowerCase();
+      return (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
+    });
+    // sort
+    if (this.sort.field) {
+      const f = this.sort.field;
+      const dir = this.sort.dir === 'asc' ? 1 : -1;
+      this.filteredPermissions.sort((a,b) => {
+        const va = ((a[f]||'') + '').toLowerCase();
+        const vb = ((b[f]||'') + '').toLowerCase();
+        if (va === vb) return 0; return va > vb ? dir : -dir;
+      });
+    }
+    // pagination
+    this.totalPages = Math.max(1, Math.ceil((this.filteredPermissions.length || 0) / this.pageSize));
+    const start = this.pageIndex * this.pageSize;
+    this.pagedPermissions = (this.filteredPermissions || []).slice(start, start + this.pageSize);
+    this.cdr.detectChanges();
+  }
+
+  onHeaderClick(field: string) {
+    if (this.sort.field === field) this.sort.dir = this.sort.dir === 'asc' ? 'desc' : 'asc';
+    else { this.sort.field = field; this.sort.dir = 'asc'; }
+    this.applyFiltersAndSort();
+  }
+
+  nextPage(){ if ((this.pageIndex+1) < this.totalPages) { this.pageIndex++; this.applyFiltersAndSort(); } }
+  prevPage(){ if (this.pageIndex>0) { this.pageIndex--; this.applyFiltersAndSort(); } }
 
   openAddDialog() {
     const dialogRef = this.dialog.open(PermissionAddEditDialogComponent, {

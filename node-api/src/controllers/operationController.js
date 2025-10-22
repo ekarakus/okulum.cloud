@@ -2,7 +2,8 @@ const { Operation, Device, OperationType, Technician } = require('../models/rela
 
 exports.getAll = async (req, res) => {
   try {
-    const { deviceId, school_id } = req.query;
+    // Accept both camelCase and snake_case query params for compatibility
+    const { deviceId, device_id, operationTypeId, operation_type_id, supportId, support_id, school_id } = req.query;
     
     // Include'da Device'ı zorunlu yap ve okul filtresi ekle
     let includeClause = [
@@ -17,8 +18,20 @@ exports.getAll = async (req, res) => {
     
     // Where koşulunu oluştur
     const whereCondition = {};
-    if (deviceId) {
-      whereCondition.device_id = deviceId;
+    // device filter (accept deviceId or device_id)
+    const deviceFilter = deviceId || device_id;
+    if (deviceFilter) {
+      whereCondition.device_id = deviceFilter;
+    }
+    // operation type filter
+    const opTypeFilter = operationTypeId || operation_type_id;
+    if (opTypeFilter) {
+      whereCondition.operation_type_id = opTypeFilter;
+    }
+    // support (fault) filter
+    const supportFilter = supportId || support_id;
+    if (supportFilter) {
+      whereCondition.support_id = supportFilter;
     }
     
     // Okul filtresi oluştur
@@ -164,6 +177,43 @@ exports.delete = async (req, res) => {
     res.json({ message: 'Silindi' });
   } catch (error) {
     console.error('Error deleting operation:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /api/operations/counts
+// body: { support_ids: [1,2,3] }
+exports.countBySupportIds = async (req, res) => {
+  try {
+    const { support_ids } = req.body;
+    if (!Array.isArray(support_ids) || support_ids.length === 0) return res.json({ counts: {} });
+
+    // Use raw query to aggregate counts grouped by support_id for performance
+    const placeholders = support_ids.map(() => '?').join(',');
+    let sql = `SELECT support_id, COUNT(*) as cnt FROM operations WHERE support_id IN (${placeholders})`;
+    const replacements = [...support_ids];
+
+    // If the request is limited to specific schools (not super-admin), restrict counts to those schools
+    if (req.userSchools !== null && req.userSchools !== undefined) {
+      const schoolIds = req.userSchools.map(us => us.school_id).filter(Boolean);
+      if (schoolIds.length === 0) return res.json({ counts: {} });
+      const schoolPlaceholders = schoolIds.map(() => '?').join(',');
+      sql += ` AND school_id IN (${schoolPlaceholders})`;
+      replacements.push(...schoolIds);
+    }
+
+  sql += ' GROUP BY support_id';
+  // When using QueryTypes.SELECT sequelize.query returns the result array directly
+  const results = await Operation.sequelize.query(sql, { replacements, type: Operation.sequelize.QueryTypes.SELECT });
+
+  const counts = {};
+  for (const row of (results || [])) counts[row.support_id] = Number(row.cnt);
+    // ensure zeros for missing ones
+    for (const id of support_ids) if (!counts[id]) counts[id] = 0;
+
+    res.json({ counts });
+  } catch (error) {
+    console.error('Error in countBySupportIds:', error);
     res.status(500).json({ error: error.message });
   }
 };

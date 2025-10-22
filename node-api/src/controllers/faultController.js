@@ -1,4 +1,4 @@
-const { FaultReport, Device, User, School, Location, sequelize } = require('../models/relations');
+const { FaultReport, Device, User, School, Location, sequelize, SchoolEmployee } = require('../models/relations');
 const { Op } = require('sequelize');
 const { UserPermission, Permission, UserSchool } = require('../models/relations');
 
@@ -17,7 +17,7 @@ async function hasSchoolPermission(userId, schoolId, permissionName) {
 async function createFault(req, res) {
   try {
     const userId = req.user.id;
-  const { school_id, device_id, issue_details, image } = req.body;
+  const { school_id, device_id, issue_details, image, requested_by_employee_id } = req.body;
   if (!school_id || !issue_details || !device_id) return res.status(400).json({ message: 'school_id, device_id and issue_details required' });
 
     if (req.user.role !== 'super_admin') {
@@ -26,7 +26,7 @@ async function createFault(req, res) {
     }
 
   // Ensure newly created reports use the canonical status value 'pending'
-  const rec = await FaultReport.create({ school_id, device_id: device_id || null, user_id: userId, issue_details, image: image || null, operation_id: null, status: 'pending' });
+  const rec = await FaultReport.create({ school_id, device_id: device_id || null, created_by_user_id: userId, requested_by_employee_id: requested_by_employee_id || null, issue_details, image: image || null, operation_id: null, status: 'pending' });
     return res.status(201).json({ fault: rec });
   } catch (err) {
     console.error('createFault error', err);
@@ -44,7 +44,8 @@ async function listFaultsForSchool(req, res) {
     }
     const faultsRaw = await FaultReport.findAll({ where: { school_id: schoolId }, order: [['created_at', 'DESC']], include: [
       { model: Device, as: 'Device', include: [{ model: Location, as: 'Location' }] },
-      { model: User, as: 'User' },
+      { model: User, as: 'Creator' },
+      { model: SchoolEmployee, as: 'RequestedByEmployee' },
       { model: School, as: 'School' }
     ] });
     const faults = (faultsRaw || []).map(f => {
@@ -54,7 +55,8 @@ async function listFaultsForSchool(req, res) {
       o.device_id = (o.Device && o.Device.id) || o.device_id || null;
       o.location_name = (o.Device && o.Device.Location && o.Device.Location.name) || (o.Location && o.Location.name) || o.location_name || null;
       o.location_room_number = (o.Device && o.Device.Location && o.Device.Location.room_number) || (o.Location && o.Location.room_number) || o.location_room_number || null;
-      o.user_name = (o.User && (o.User.name || o.User.username)) || o.user_name || null;
+  o.user_name = (o.Creator && (o.Creator.name || o.Creator.username)) || o.user_name || null;
+  o.requested_by_employee_name = (o.RequestedByEmployee && (o.RequestedByEmployee.name || o.RequestedByEmployee.full_name)) || null;
       return o;
     });
     return res.json({ faults });
@@ -91,21 +93,51 @@ async function listFaultsPaged(req, res) {
       where.issue_details = { [Op.like]: `%${search}%` };
     }
 
-    const order = [[sortField, sortDir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC']];
+    // Build includes array so we can reuse it for ordering by association columns when needed
+    const includes = [
+      { model: Device, as: 'Device', include: [{ model: Location, as: 'Location' }] },
+      { model: User, as: 'Creator' },
+      { model: SchoolEmployee, as: 'RequestedByEmployee' },
+      { model: School, as: 'School' }
+    ];
+
+  // Build order mapping. If sortField refers to an associated/virtual field, map to correct association column
+  const dir = sortDir && String(sortDir).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+  // Default sort: created_at desc when no sortField provided
+  const sf = sortField && String(sortField).trim().length > 0 ? sortField : 'created_at';
+    let order;
+  switch (sf) {
+      case 'device_name':
+        order = [[ { model: Device, as: 'Device' }, 'name', dir ]];
+        break;
+      case 'location_name':
+        // sort by device's location name when available
+        order = [[ { model: Device, as: 'Device' }, { model: Location, as: 'Location' }, 'name', dir ]];
+        break;
+      case 'user_name':
+        order = [[ { model: User, as: 'Creator' }, 'name', dir ]];
+        break;
+      case 'requested_by_employee_name':
+        order = [[ { model: SchoolEmployee, as: 'RequestedByEmployee' }, 'name', dir ]];
+        break;
+      case 'created_at':
+        order = [[ 'created_at', dir ]];
+        break;
+      default:
+        // fallback: try ordering by a direct column on FaultReport
+        order = [[ sf || 'created_at', dir ]];
+    }
 
     const offset = (p - 1) * ps;
-    const { count, rows } = await FaultReport.findAndCountAll({ where, order, offset, limit: ps, include: [
-      { model: Device, as: 'Device', include: [{ model: Location, as: 'Location' }] },
-      { model: User, as: 'User' },
-      { model: School, as: 'School' }
-    ] });
+    const { count, rows } = await FaultReport.findAndCountAll({ where, order, offset, limit: ps, include: includes });
     const faults = (rows || []).map(f => {
       const o = (typeof f.toJSON === 'function') ? f.toJSON() : f;
       o.device_name = (o.Device && o.Device.name) || o.device_name || null;
       o.device_id = (o.Device && o.Device.id) || o.device_id || null;
       o.location_name = (o.Device && o.Device.Location && o.Device.Location.name) || (o.Location && o.Location.name) || o.location_name || null;
       o.location_room_number = (o.Device && o.Device.Location && o.Device.Location.room_number) || (o.Location && o.Location.room_number) || o.location_room_number || null;
-      o.user_name = (o.User && (o.User.name || o.User.username)) || o.user_name || null;
+  o.user_name = (o.Creator && (o.Creator.name || o.Creator.username)) || o.user_name || null;
+  o.requested_by_employee_name = (o.RequestedByEmployee && (o.RequestedByEmployee.name || o.RequestedByEmployee.full_name)) || null;
       return o;
     });
     return res.json({ total: count, page: p, pageSize: ps, faults });
@@ -121,7 +153,8 @@ async function getFaultById(req, res) {
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
     const fault = await FaultReport.findByPk(id, { include: [
       { model: Device, as: 'Device', include: [{ model: Location, as: 'Location' }] },
-      { model: User, as: 'User' },
+      { model: User, as: 'Creator' },
+      { model: SchoolEmployee, as: 'RequestedByEmployee' },
       { model: School, as: 'School' }
     ] });
     if (!fault) return res.status(404).json({ message: 'Not found' });
@@ -165,6 +198,8 @@ async function updateFault(req, res) {
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
   const { issue_details, device_id, location_id, image } = req.body;
   let { status } = req.body;
+  // support updating the optional requested_by_employee_id
+  const requested_by_employee_id = typeof req.body.requested_by_employee_id !== 'undefined' ? req.body.requested_by_employee_id : undefined;
     const fault = await FaultReport.findByPk(id);
     if (!fault) return res.status(404).json({ message: 'Not found' });
     if (req.user.role !== 'super_admin') {
@@ -175,6 +210,10 @@ async function updateFault(req, res) {
     if (typeof device_id !== 'undefined') fault.device_id = device_id || null;
     if (typeof location_id !== 'undefined') fault.location_id = location_id || null;
     if (typeof image !== 'undefined') fault.image = image || null;
+    if (typeof requested_by_employee_id !== 'undefined') {
+      // allow null to clear the value
+      fault.requested_by_employee_id = requested_by_employee_id || null;
+    }
     if (typeof status !== 'undefined') {
       // accept legacy 'open' but store canonical 'pending'
       fault.status = (status === 'open') ? 'pending' : status;

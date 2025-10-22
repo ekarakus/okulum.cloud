@@ -19,7 +19,7 @@ import { MatSelectModule } from '@angular/material/select';
   imports: [CommonModule, FormsModule, ReactiveFormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatAutocompleteModule, MatSelectModule, MatOptionModule],
   template: `
     <h2 mat-dialog-title>{{ editMode ? 'Destek Talebi Düzenle' : 'Yeni Destek Talebi' }}</h2>
-    <mat-dialog-content class="dialog-content">
+  <mat-dialog-content class="dialog-content">
       <div style="display:flex; flex-direction:column; gap:8px; min-width:360px;">
         <mat-form-field appearance="outline">
           <mat-label>Lokasyon (zorunlu)</mat-label>
@@ -43,6 +43,14 @@ import { MatSelectModule } from '@angular/material/select';
   <textarea rows="6" [(ngModel)]="issueDetails" style="width:100%;font-size:12pt;padding:10px;"></textarea>
   <div style="font-size:0.85rem; color:#666; margin-top:6px;">Not: Detay en az 10 karakter olmalıdır.</div>
         <div *ngIf="submittedAttempt && (!issueDetails || issueDetails.trim().length < 10)" style="color:#b00020; font-size:0.9rem; margin-top:-8px;">Detay en az 10 karakter olmalı.</div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Talep Eden Personel (opsiyonel)</mat-label>
+          <mat-select [(value)]="selectedRequestedByEmployeeId">
+            <mat-option [value]="null">Tümü / Seçme</mat-option>
+            <mat-option *ngFor="let e of employees" [value]="e.id">{{ e.name || e.full_name || ('#' + e.id) }}</mat-option>
+          </mat-select>
+        </mat-form-field>
 
         <mat-form-field appearance="outline" *ngIf="editMode">
           <mat-label>Durum</mat-label>
@@ -90,6 +98,9 @@ export class FaultAddDialogComponent {
   locations: any[] = [];
   filteredLocations: any[] = [];
   filteredDevices: any[] = [];
+  // school employees for optional 'requested by' selection
+  employees: any[] = [];
+  selectedRequestedByEmployeeId: number | null = null;
   // edit-mode
   editMode = false;
   faultId: number | null = null;
@@ -97,6 +108,7 @@ export class FaultAddDialogComponent {
 
   constructor(public dialogRef: MatDialogRef<FaultAddDialogComponent>, @Inject(MAT_DIALOG_DATA) public data: any, private http: HttpClient, private auth: AuthService, private cdr: ChangeDetectorRef) {
     this.loadLocations();
+    this.loadEmployees();
     // watch input changes for client-side filtering
     this.locationCtrl.valueChanges.subscribe(v => {
       // if an object is present (user picked an option), set selectedLocation
@@ -154,6 +166,15 @@ export class FaultAddDialogComponent {
     });
   }
 
+  loadEmployees(){
+    const token = this.getToken();
+    const selected = this.auth.getSelectedSchool();
+    if (!selected) return;
+    const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
+  const url = `${apiBase}/api/school-employees/school/${selected.id}`;
+    this.http.get(url, { headers, responseType: 'json' } as any).subscribe({ next: (d:any) => { this.employees = Array.isArray(d) ? d : []; }, error: (e:any) => { console.error('load employees', e); this.employees = []; } });
+  }
+
   async loadForEdit(id: number) {
     const token = this.getToken();
     const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
@@ -188,6 +209,8 @@ export class FaultAddDialogComponent {
         const devObj = this.devices.find((d:any)=>Number(d.id)===Number(this.deviceId)) || null;
         try { this.deviceCtrl.setValue(devObj || ''); } catch(e){}
       }
+      // if server returned requested_by_employee_id, populate selection
+      this.selectedRequestedByEmployeeId = f.requested_by_employee_id || null;
       try { this.cdr.detectChanges(); } catch(e){}
     } catch (e) { console.error('loadForEdit', e); }
   }
@@ -298,6 +321,7 @@ export class FaultAddDialogComponent {
       payload.device_id = this.deviceId || null;
       payload.issue_details = this.issueDetails || '';
       payload.image = newImagePath || null;
+  payload.requested_by_employee_id = this.selectedRequestedByEmployeeId || null;
       if (this.selectedStatus) payload.status = this.selectedStatus;
       try {
         const oldImage = this.imagePath || null;
@@ -317,6 +341,8 @@ export class FaultAddDialogComponent {
 
     const payload: any = { school_id: selected.id, device_id: this.deviceId || null, issue_details: this.issueDetails, image: newImagePath || null };
     if (this.selectedLocation && this.selectedLocation.id) payload.location_id = this.selectedLocation.id;
+  // include optional requested_by_employee_id if selected (allow null)
+  if (typeof this.selectedRequestedByEmployeeId !== 'undefined') payload.requested_by_employee_id = this.selectedRequestedByEmployeeId || null;
     try { console.debug('FaultAddDialog.onSubmit payload:', payload); } catch(e) {}
     this.http.post(`${apiBase}/api/faults`, payload, { headers }).subscribe({ next: () => { this.submitting = false; this.dialogRef.close('created'); }, error: e => { console.error('create fault', e); this.error = e?.error?.message || 'Kayıt hatası'; this.submitting = false; } });
   }

@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FaultImageDialogComponent } from '../fault-image-dialog/fault-image-dialog.component';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -17,12 +18,14 @@ import { MatOptionModule } from '@angular/material/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { SnackbarService } from '../services/snackbar.service';
 import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.component';
+import { OperationCreateDialogComponent } from '../operation-create-dialog/operation-create-dialog.component';
 
 @Component({
   selector: 'app-fault-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatDialogModule, MatIconModule, MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatOptionModule, MatCheckboxModule],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatDialogModule, MatIconModule, MatTooltipModule, MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatOptionModule, MatCheckboxModule],
   template: `
     <div class="container">
       <div class="header">
@@ -52,7 +55,7 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
           <h2><mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon> Destek Talepleri Listesi</h2>
         </div>
 
-        <div class="table-controls" style="padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+        <div class="table-controls" style="padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:1rem; align-items:start; flex-wrap:wrap;">
           <mat-form-field appearance="outline" style="width:280px;">
             <input matInput placeholder="Ara (detay)" [(ngModel)]="filters.search" (ngModelChange)="onSearchChange($event)">
           </mat-form-field>
@@ -79,29 +82,33 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
               <mat-option value="closed">Kapandı</mat-option>
             </mat-select>
           </mat-form-field>
-          <button mat-stroked-button color="warn" (click)="bulkDelete()" [disabled]="selectedIds.length===0" style="margin-left:12px">Seçilenleri Sil</button>
+          <button mat-stroked-button color="warn" (click)="bulkDelete()" [disabled]="selectedIds.length===0" class="google-delete-btn" style="margin-left:12px">
+            <mat-icon class="google-icon" fontSet="material-symbols-outlined" aria-hidden="true">delete</mat-icon>
+            Seçilenleri Sil
+          </button>
         </div>
 
         <div class="table-container">
           <table style="width:100%; border-collapse: collapse;">
             <thead>
-              <tr style="background-color:#f5f5f5;">
+              <tr class="table-head-row">
                 <th style="padding:8px; width:40px;">
                   <mat-checkbox [checked]="areAllVisibleSelected()" [indeterminate]="isSomeVisibleSelected()" (change)="toggleSelectAll($event)"></mat-checkbox>
                 </th>
-                <th (click)="onHeaderClick('issue_details')" style="padding:8px; cursor:pointer">Detay <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='issue_details'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
-                <th (click)="onHeaderClick('status')" style="padding:8px; cursor:pointer">Durum <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='status'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
+                <th class="sortable-header" (click)="onHeaderClick('issue_details')">Detay <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='issue_details'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
+                <th class="sortable-header" (click)="onHeaderClick('status')">Durum <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='status'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
                 <th style="padding:8px;">Görsel</th>
-                <th style="padding:8px;">Lokasyon</th>
-                <th style="padding:8px;">Demirbaş</th>
-                <th style="padding:8px;">Oluşturan</th>
-                <th style="padding:8px;">Tarih</th>
+                <th class="sortable-header" (click)="onHeaderClick('location_name')" style="padding:8px;">Lokasyon <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='location_name'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
+                <th class="sortable-header" (click)="onHeaderClick('device_name')" style="padding:8px;">Demirbaş <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='device_name'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
+                <th class="sortable-header" (click)="onHeaderClick('user_name')" style="padding:8px;">Oluşturan <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='user_name'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
+                <th class="sortable-header" (click)="onHeaderClick('requested_by_employee_name')" style="padding:8px;">Talep Eden <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='requested_by_employee_name'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
+                <th class="sortable-header" (click)="onHeaderClick('created_at')" style="padding:8px;">Tarih <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='created_at'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
                 <th style="padding:8px;">Düzenle</th>
                 <th style="padding:8px;">İşlem</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngIf="pagedFaults.length === 0"><td colspan="9" style="padding:20px; text-align:center; color:#666">Henüz destek talebi yok.</td></tr>
+              <tr *ngIf="pagedFaults.length === 0"><td colspan="11" style="padding:20px; text-align:center; color:#666">Henüz destek talebi yok.</td></tr>
               <tr *ngFor="let f of pagedFaults" style="border-bottom:1px solid #eee;" (click)="onRowClick($event, f)">
                 <td style="padding:8px; width:40px;">
                   <mat-checkbox [(ngModel)]="selectionMap[f.id]" (click)="$event.stopPropagation()"></mat-checkbox>
@@ -111,15 +118,26 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
                 <td style="padding:8px;"> <button mat-button *ngIf="f.image" (click)="openImage(f, $event)">Göster</button> </td>
                 <td style="padding:8px;">{{ f.Location?.name || f.location?.name || f.location_name || '' }}<span *ngIf="(f.Location?.room_number || f.location?.room_number)"> (Oda: {{f.Location?.room_number || f.location?.room_number}})</span></td>
                 <td style="padding:8px;">{{ f.Device?.name || f.device?.name || f.device_name || '' }}</td>
-                <td style="padding:8px;">{{ f.User?.name || f.User?.username || f.user?.name || f.user?.username || f.user_id }}</td>
+                <td style="padding:8px;">{{ f.Creator?.name || f.Creator?.username || f.user_name || f.created_by_user_id || '' }}</td>
+                <td style="padding:8px; font-size:0.9rem; color:#444">{{ f.requested_by_employee_name || '' }}</td>
                 <td style="padding:8px;">{{f.created_at | date:'short'}}</td>
                 <td style="padding:8px; width:64px; text-align:center;">
                   <button mat-icon-button color="primary" (click)="openEdit(f, $event)" aria-label="Düzenle">
                     <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
                   </button>
                 </td>
-                <td style="padding:8px; width:120px; text-align:center;">
-                  <button *ngIf="isActionable(f)" mat-stroked-button color="accent" (click)="onActionClick(f, $event)">İşlem Yap</button>
+                <td style="padding:8px; width:120px; text-align:center; display:flex; gap:6px; justify-content:center;">
+                  <button *ngIf="isActionable(f)" mat-mini-fab color="accent" matTooltip="İşlem Ekle" (click)="onActionClick(f, $event)" aria-label="İşlem Ekle">
+                    <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
+                  </button>
+                  <button *ngIf="(f.device_id || f.Device?.id)" mat-mini-fab color="primary" matTooltip="Cihazın işlemlerine git" (click)="goToDeviceOperations(f, $event)" aria-label="Cihaz İşlemleri">
+                    <ng-container *ngIf="operationCounts && operationCounts[f.id] > 0; else noCount">
+                      <span style="padding:6px 8px; font-size:0.85rem; font-weight:600; color:white">{{ operationCounts[f.id] }}</span>
+                    </ng-container>
+                    <ng-template #noCount>
+                      <mat-icon fontSet="material-symbols-outlined">open_in_new</mat-icon>
+                    </ng-template>
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -148,12 +166,40 @@ import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.co
     .back-btn { background-color:#f8f9fa; color:#1976d2; border:2px solid #e3f2fd; }
     .add-btn { padding:0.75rem 1.5rem; border-radius:8px; }
     .pagination-controls { padding:1rem; display:flex; justify-content:center; align-items:center; gap:1rem; border-top:1px solid #e0e0e0; }
+    /* Make controls inside .table-controls have consistent height and alignment */
+    .table-controls .mat-form-field, .table-controls .mat-select, .table-controls .mat-form-field .mat-select-trigger {
+      height: 40px; /* uniform control height */
+      min-height: 40px;
+      align-items: center;
+      display: inline-flex;
+    }
+    .table-controls .mat-form-field .mat-form-field-wrapper { height: 40px; }
+    .table-controls button.mat-stroked-button, .table-controls button.mat-raised-button, .table-controls button.mat-button {
+      height: 40px; line-height: 40px; min-height: 40px; padding: 0 12px; box-sizing: border-box;
+    }
+    .table-controls .mat-form-field-infix { padding: 0 12px; box-sizing: border-box; }
+
+  /* Styled delete icon in bulk-delete button (no external image) */
+  .google-delete-btn { display:inline-flex; align-items:center; gap:8px; height:40px; }
+  .google-delete-btn .google-icon { width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background: rgba(0,0,0,0.06); color: rgba(255,255,255,1); font-size:16px; transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease; }
+  /* Prominent style when the button is enabled */
+  .google-delete-btn:not([disabled]) .google-icon { background: #d32f2f; color: #fff; box-shadow: 0 2px 6px rgba(211,47,47,0.25); transform: none; }
+  .google-delete-btn:not([disabled]):hover .google-icon,
+  .google-delete-btn:not([disabled]):focus .google-icon { transform: scale(1.07); box-shadow: 0 6px 16px rgba(211,47,47,0.28); }
+  /* Disabled appearance */
+  .google-delete-btn[disabled] .google-icon { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.38); box-shadow:none; }
+
+    .table-head-row { background-color: #f5f5f5; }
+    .sortable-header { padding: 8px; cursor: pointer; user-select: none; font-weight:600; color:#2c3e50; }
+    .sortable-header mat-icon { vertical-align: middle; margin-left:6px; font-size:16px; color:#666 }
+
   `]
 })
 
 export class FaultListComponent implements OnInit {
   faults: any[] = [];
   pagedFaults: any[] = [];
+  operationCounts: { [supportId: number]: number } = {};
   selectionMap: { [id: number]: boolean } = {};
   isLoading = false;
   sort: { field: string | null, dir: 'asc' | 'desc' } = { field: null, dir: 'asc' };
@@ -166,7 +212,7 @@ export class FaultListComponent implements OnInit {
 
   private schoolSub: any;
 
-  constructor(private http: HttpClient, private dialog: MatDialog, public router: Router, private cdr: ChangeDetectorRef, @Inject(PLATFORM_ID) private platformId: Object, private auth: AuthService) {}
+  constructor(private http: HttpClient, private dialog: MatDialog, public router: Router, private cdr: ChangeDetectorRef, @Inject(PLATFORM_ID) private platformId: Object, private auth: AuthService, private snack: SnackbarService) {}
 
   ngOnInit(){
     // subscribe to selected school so the list auto-loads when the app initialises
@@ -238,14 +284,16 @@ export class FaultListComponent implements OnInit {
       // Build creators list from fetched faults (unique)
       const map: { [k: string]: { id: number|null, name: string } } = {};
       for (const f of this.faults) {
-        const uid = f.User?.id || f.user_id || null;
-        const uname = (f.User && (f.User.name || f.User.username)) || f.user_name || (f.user && (f.user.name || f.user.username)) || String(uid);
+        const uid = f.Creator?.id || f.created_by_user_id || null;
+        const uname = (f.Creator && (f.Creator.name || f.Creator.username)) || f.user_name || (f.user && (f.user.name || f.user.username)) || String(uid);
         const key = uid !== null ? String(uid) : `null_${uname}`;
         if (!map[key]) map[key] = { id: uid, name: uname };
       }
   this.creators = Object.keys(map).map(k => ({ id: map[k].id as number | null, name: map[k].name }));
-      // apply filters and grouping
+    // apply filters and grouping
   this.applyFilters();
+    // fetch operation counts for current page (visible faults)
+    setTimeout(() => this.loadOperationCountsForVisible(), 0);
       this.isLoading=false; this.cdr.detectChanges();
     }, error: (e: any) => { console.error('load faults', e); this.isLoading=false; this.cdr.detectChanges(); } });
   }
@@ -268,7 +316,7 @@ export class FaultListComponent implements OnInit {
       }
       if (this.filters.creator) {
         const cid = Number(this.filters.creator);
-        const fid = f.User?.id || f.user_id || null;
+        const fid = f.Creator?.id || f.created_by_user_id || null;
         if (Number(fid) !== cid) return false;
       }
       return true;
@@ -307,8 +355,8 @@ export class FaultListComponent implements OnInit {
   ref.afterClosed().subscribe((r: any) => { if (r) this.loadFaults(); });
       } catch (e) {
         // fallback to route-based navigation if dialog open fails
-        try { console.error('openEdit dialog error', e); } catch (er) {}
-        try { alert('Düzenleme penceresi açılamadı, detay sayfasına yönlendiriliyorsunuz. Hata: ' + String(e)); } catch (er) {}
+  try { console.error('openEdit dialog error', e); } catch (er) {}
+  try { this.snack.error('Düzenleme penceresi açılamadı, detay sayfasına yönlendiriliyorsunuz. Hata: ' + String(e)); } catch (er) {}
         this.router.navigate(['/faults', f.id]);
       }
   }
@@ -320,12 +368,93 @@ export class FaultListComponent implements OnInit {
     } catch (e) { console.error('open image dialog', e); }
   }
 
-  onActionClick(f: any, ev?: Event) {
+  async onActionClick(f: any, ev?: Event) {
     if (ev) ev.stopPropagation();
     try {
-      // navigate to the fault detail page (keeps behavior simple and consistent)
-      this.router.navigate(['/faults', f.id]);
-    } catch (e) { console.error('onActionClick error', e); }
+      // prefer dynamic import of the full operation add/edit dialog so we reuse the existing form
+      const m = await import('../operation-add-edit-dialog/operation-add-edit-dialog.component');
+      const Comp = m.OperationAddEditDialogComponent;
+
+      // try to pass selectedSchoolId so the dialog can filter devices/technicians
+      let school: any = this.auth.getSelectedSchool();
+      if (!school && isPlatformBrowser(this.platformId)) {
+        try { const raw = localStorage.getItem('selectedSchool'); if (raw) school = JSON.parse(raw); } catch (e) { school = null; }
+      }
+
+      const deviceId = f.device_id || f.Device?.id || null;
+      const dialogRef = this.dialog.open(Comp, {
+        width: '720px',
+        data: {
+          operation: { device_id: deviceId || '', support_id: f.id },
+          selectedSchoolId: school?.id || undefined,
+          // preselect and disable device field when launching from a specific fault
+          deviceDisabled: !!deviceId
+        }
+      });
+
+      dialogRef.afterClosed().subscribe(async (formValue: any) => {
+        if (!formValue) return;
+        // attach fault_id and ensure school_id is set (use formValue, selected school or fault fallback)
+        const payload = {
+          ...formValue,
+          support_id: f.id,
+          school_id: formValue?.school_id || (school && school.id) || f.school_id || f.school?.id
+        };
+        this.isLoading = true;
+        const token = this.getToken();
+        const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }) : new HttpHeaders({ 'Content-Type': 'application/json' });
+          try {
+          await this.http.post(`${apiBase}/api/operations`, payload, { headers }).toPromise();
+          this.snack.success('İşlem oluşturuldu.');
+          this.selectionMap = {};
+          this.loadFaults();
+        } catch (err) {
+          console.error('create operation error', err);
+          this.snack.error('İşlem oluşturulamadı. Konsolu kontrol edin.');
+        } finally {
+          this.isLoading = false; this.cdr.detectChanges();
+        }
+      });
+    } catch (e) {
+      console.error('onActionClick error', e);
+      // fallback: open the small operation create dialog if dynamic import fails
+      try {
+        const ref = this.dialog.open(OperationCreateDialogComponent, { width: '520px', data: { fault: f } });
+        ref.afterClosed().subscribe((r: any) => { if (r) { /* noop, earlier flow handled */ } });
+      } catch (err) { /* ignore */ }
+    }
+  }
+
+  goToDeviceOperations(f: any, ev?: Event) {
+    if (ev) ev.stopPropagation();
+    // Prefer opening operations page filtered by support (fault) id so users see the operations linked to this support
+    const supportId = f.id;
+    const deviceId = f.device_id || f.Device?.id;
+    try {
+      let url: string;
+      if (supportId) {
+        url = `${window.location.origin}/operations?support_id=${encodeURIComponent(String(supportId))}`;
+      } else if (deviceId) {
+        url = `${window.location.origin}/operations?device_id=${encodeURIComponent(String(deviceId))}`;
+      } else {
+        return;
+      }
+      window.open(url, '_blank');
+    } catch (e) { console.error('navigate to device operations', e); }
+  }
+
+  private async loadOperationCountsForVisible() {
+    try {
+      const visible = (this.pagedFaults && this.pagedFaults.length ? this.pagedFaults : this.faults).map(f => f.id).filter(Boolean);
+      if (!visible || visible.length === 0) return; // nothing to do
+      const token = this.getToken(); const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }) : new HttpHeaders({ 'Content-Type': 'application/json' });
+      const resp: any = await this.http.post(`${apiBase}/api/operations/counts`, { support_ids: visible }, { headers }).toPromise();
+      if (resp && resp.counts) this.operationCounts = resp.counts;
+      else this.operationCounts = {};
+      this.cdr.detectChanges();
+    } catch (err) {
+      console.error('loadOperationCountsForVisible error', err);
+    }
   }
 
   ngOnDestroy(): void {
@@ -342,7 +471,13 @@ export class FaultListComponent implements OnInit {
     this.pagedFaults = (source || []).slice(start, start + this.pageSize);
   }
 
-  onHeaderClick(field: string){ if (this.sort.field === field) this.sort.dir = this.sort.dir === 'asc' ? 'desc' : 'asc'; else { this.sort.field = field; this.sort.dir = 'asc'; } this.applySort(); this.pageIndex = 0; this.updatePagedData(); }
+  onHeaderClick(field: string){
+    if (this.sort.field === field) this.sort.dir = this.sort.dir === 'asc' ? 'desc' : 'asc';
+    else { this.sort.field = field; this.sort.dir = 'asc'; }
+    // Request server-side sorted data
+    this.pageIndex = 0;
+    this.loadFaults();
+  }
 
   onSearch(){ this.pageIndex = 0; this.loadFaults(); }
   onFilterChange(){ this.pageIndex = 0; this.loadFaults(); }
@@ -389,7 +524,7 @@ export class FaultListComponent implements OnInit {
         this.loadFaults();
       } catch (err) {
         console.error('bulk delete error', err);
-        alert('Silme sırasında hata oluştu. Konsolu kontrol edin.');
+  this.snack.error('Silme sırasında hata oluştu. Konsolu kontrol edin.');
         this.isLoading = false; this.cdr.detectChanges();
       }
     }
@@ -410,7 +545,7 @@ export class FaultListComponent implements OnInit {
       this.loadFaults();
     } catch (err) {
       console.error('bulk status update error', err);
-      alert('Durum güncelleme sırasında hata oluştu. Konsolu kontrol edin.');
+  this.snack.error('Durum güncelleme sırasında hata oluştu. Konsolu kontrol edin.');
       this.isLoading = false; this.cdr.detectChanges();
     }
   }

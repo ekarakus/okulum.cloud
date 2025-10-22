@@ -85,8 +85,13 @@ Operation.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 FaultReport.belongsTo(Device, { foreignKey: 'device_id', as: 'Device' });
 Device.hasMany(FaultReport, { foreignKey: 'device_id', as: 'FaultReports' });
 
-FaultReport.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
-User.hasMany(FaultReport, { foreignKey: 'user_id', as: 'FaultReports' });
+// The user who created the fault report
+FaultReport.belongsTo(User, { foreignKey: 'created_by_user_id', as: 'Creator' });
+User.hasMany(FaultReport, { foreignKey: 'created_by_user_id', as: 'CreatedFaultReports' });
+
+// Optional staff member (school employee) who requested the fault
+FaultReport.belongsTo(SchoolEmployee, { foreignKey: 'requested_by_employee_id', as: 'RequestedByEmployee' });
+SchoolEmployee.hasMany(FaultReport, { foreignKey: 'requested_by_employee_id', as: 'RequestedFaultReports' });
 
 FaultReport.belongsTo(School, { foreignKey: 'school_id', as: 'School' });
 School.hasMany(FaultReport, { foreignKey: 'school_id', as: 'FaultReports' });

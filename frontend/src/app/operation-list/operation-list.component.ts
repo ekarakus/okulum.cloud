@@ -1,4 +1,5 @@
 import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { OperationAddEditDialogComponent } from '../operation-add-edit-dialog/operation-add-edit-dialog.component';
+import { OperationSupportDialogComponent } from '../operation-support-dialog/operation-support-dialog.component';
 import { apiBase } from '../runtime-config';
 import { AuthService } from '../services/auth.service';
 
@@ -58,6 +60,13 @@ import { AuthService } from '../services/auth.service';
               <option *ngFor="let t of operationTypes" [ngValue]="t.id">{{t.name}}</option>
             </select>
           </div>
+          <div style="min-width:260px;">
+            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Destek Talepleri</label>
+            <select [(ngModel)]="filterSupportId" (change)="applyFilters()" style="padding:6px; width:100%; border:1px solid #ccc; border-radius:4px;">
+              <option [ngValue]="null">Tümü</option>
+              <option *ngFor="let s of supports" [ngValue]="s.id">{{ supportLabel(s) }}</option>
+            </select>
+          </div>
           <div>
             <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Başlangıç Tarihi</label>
             <input type="date" [(ngModel)]="filterStartDate" (change)="applyFilters()" style="padding:6px; border:1px solid #ccc; border-radius:4px;" />
@@ -98,24 +107,25 @@ import { AuthService } from '../services/auth.service';
           <thead>
             <tr style="background-color: #f5f5f5;">
               <th (click)="onHeaderClick('device')" style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd; cursor:pointer">Demirbaş
-                <mat-icon *ngIf="sort.field==='device'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='device'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
               </th>
               <th (click)="onHeaderClick('operation_type')" style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd; cursor:pointer">İşlem Türü
-                <mat-icon *ngIf="sort.field==='operation_type'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='operation_type'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
               </th>
               <th (click)="onHeaderClick('description')" style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd; cursor:pointer">Açıklama
-                <mat-icon *ngIf="sort.field==='description'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='description'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
               </th>
               <th (click)="onHeaderClick('date')" style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd; cursor:pointer">Tarih
-                <mat-icon *ngIf="sort.field==='date'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='date'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
               </th>
               <th (click)="onHeaderClick('technician')" style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd; cursor:pointer">Teknisyen
-                <mat-icon *ngIf="sort.field==='technician'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='technician'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
               </th>
               <th (click)="onHeaderClick('status')" style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd; cursor:pointer">Durum
-                <mat-icon *ngIf="sort.field==='status'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='status'" style="vertical-align: middle; font-size: 14px; margin-left:6px">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
               </th>
               <th style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd;">İşlem</th>
+              <th style="padding: 4px 12px; text-align: left; border-bottom: 1px solid #ddd;">Destek?</th>
             </tr>
           </thead>
           <tbody>
@@ -146,6 +156,11 @@ import { AuthService } from '../services/auth.service';
                   Sil
                 </button>
               </td>
+                <td style="padding: 4px 12px; width:120px;">
+                  <button *ngIf="o.support_id" mat-mini-fab color="primary" matTooltip="Destek talebini göster" (click)="openSupportDialog(o.support_id)">
+                    <mat-icon fontSet="material-symbols-outlined">support_agent</mat-icon>
+                  </button>
+                </td>
             </tr>
             <tr *ngIf="filteredOperations.length === 0">
               <td colspan="7" style="padding: 20px; text-align: center; color: #666;">
@@ -216,18 +231,23 @@ export class OperationListComponent implements OnInit {
   sort: { field: string | null, dir: 'asc' | 'desc' } = { field: null, dir: 'asc' };
   filterDeviceId: number | null = null;
   filterOperationTypeId: number | null = null;
+  filterSupportId: number | null = null;
   filterStartDate: string | null = null;
   filterEndDate: string | null = null;
   searchText: string = '';
   devices: any[] = [];
   operationTypes: any[] = [];
   technicians: any[] = [];
+  supports: any[] = [];
   selectedSchool: any = null;
+  // track whether we previously used server-side filtering so we can reload when the filter is cleared
+  private prevServerFilterActive: boolean = false;
 
   constructor(
     private http: HttpClient,
     private dialog: MatDialog,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private authService: AuthService,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -236,6 +256,17 @@ export class OperationListComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Read query params so page can be pre-filtered via URL
+    try {
+      const qp = this.route.snapshot.queryParamMap;
+      const dev = qp.get('device_id');
+      const op = qp.get('operation_type_id');
+      const sp = qp.get('support_id');
+      if (dev) this.filterDeviceId = isNaN(Number(dev)) ? null : Number(dev);
+      if (op) this.filterOperationTypeId = isNaN(Number(op)) ? null : Number(op);
+      if (sp) this.filterSupportId = isNaN(Number(sp)) ? null : Number(sp);
+    } catch (e) { /* ignore */ }
+
     // Seçili okulu dinle ve okul değiştiğinde verileri yenile
     this.authService.selectedSchool$.subscribe(school => {
       this.selectedSchool = school;
@@ -270,16 +301,22 @@ export class OperationListComponent implements OnInit {
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 
       // Okul filtresi ekle - SÜPER ADMİN DAHİL HERKES SEÇİLİ OKULA GÖRE FİLTRELENECEK
-      let url = `${apiBase}/api/operations`;
-      if (this.selectedSchool) {
-        url += `?school_id=${this.selectedSchool.id}`;
-      }
+  let url = `${apiBase}/api/operations`;
+  const qp: string[] = [];
+  if (this.selectedSchool) qp.push(`school_id=${this.selectedSchool.id}`);
+  // Include server-side filters if set
+  if (this.filterSupportId) qp.push(`support_id=${this.filterSupportId}`);
+  if (this.filterDeviceId) qp.push(`device_id=${this.filterDeviceId}`);
+  if (this.filterOperationTypeId) qp.push(`operation_type_id=${this.filterOperationTypeId}`);
+  if (qp.length) url += `?${qp.join('&')}`;
 
-      this.http.get<any[]>(url, { headers }).subscribe({
+      this.http.get<any>(url, { headers }).subscribe({
         next: data => {
-          this.operations = data;
+          // Normalize response to array if server wraps it in an object
+          this.operations = Array.isArray(data) ? data : (data && Array.isArray((data as any).operations) ? (data as any).operations : []);
           this.loadSortFromStorage();
-          this.applyFilters();
+          // If support filter is active we already filtered server-side, so just apply other client filters
+          this.applyFilters(false);
           // Clear loading flag first, then run change detection so template updates immediately
           this.isLoading = false;
           this.cdr.detectChanges();
@@ -307,14 +344,14 @@ export class OperationListComponent implements OnInit {
       if (this.selectedSchool) {
         devicesUrl += `?school_id=${this.selectedSchool.id}`;
       }
-      this.http.get<any[]>(devicesUrl, { headers }).subscribe({
-        next: data => { this.devices = data; this.cdr.detectChanges(); },
+      this.http.get<any>(devicesUrl, { headers }).subscribe({
+        next: data => { this.devices = Array.isArray(data) ? data : (data && Array.isArray((data as any).devices) ? (data as any).devices : []); this.cdr.detectChanges(); },
         error: err => { console.error('Error loading devices:', err); }
       });
 
       // Load operation types from API
-      this.http.get<any[]>(`${apiBase}/api/operation-types`, { headers }).subscribe({
-        next: data => { this.operationTypes = data; this.cdr.detectChanges(); },
+      this.http.get<any>(`${apiBase}/api/operation-types`, { headers }).subscribe({
+        next: data => { this.operationTypes = Array.isArray(data) ? data : (data && Array.isArray((data as any).operationTypes) ? (data as any).operationTypes : []); this.cdr.detectChanges(); },
         error: err => { console.error('Error loading operation types:', err); }
       });
 
@@ -323,9 +360,18 @@ export class OperationListComponent implements OnInit {
       if (this.selectedSchool) {
         techUrl += `?school_id=${this.selectedSchool.id}`;
       }
-      this.http.get<any[]>(techUrl, { headers }).subscribe({
-        next: data => { this.technicians = data; this.cdr.detectChanges(); if (afterLoad) afterLoad(); },
+      this.http.get<any>(techUrl, { headers }).subscribe({
+        next: data => { this.technicians = Array.isArray(data) ? data : (data && Array.isArray((data as any).technicians) ? (data as any).technicians : []); this.cdr.detectChanges(); if (afterLoad) afterLoad(); },
         error: err => { console.error('Error loading technicians:', err); if (afterLoad) afterLoad(); }
+      });
+      // Load supports (faults) for the selected school so user can filter operations by support request
+      let supportsUrl = `${apiBase}/api/faults`;
+      if (this.selectedSchool) {
+        supportsUrl += `?school_id=${this.selectedSchool.id}`;
+      }
+      this.http.get<any>(supportsUrl, { headers }).subscribe({
+        next: data => { this.supports = Array.isArray(data) ? data : (data && Array.isArray((data as any).faults) ? (data as any).faults : []); this.cdr.detectChanges(); },
+        error: err => { console.error('Error loading supports (faults):', err); }
       });
     }
   }
@@ -352,7 +398,8 @@ export class OperationListComponent implements OnInit {
     const dialogRef = this.dialog.open(OperationAddEditDialogComponent, {
       width: '500px',
       data: {
-        operation,
+        // ensure support_id is explicitly passed so the dialog's hidden control is populated
+        operation: { ...operation, support_id: operation?.support_id ?? null },
         devices: this.devices,
         operationTypes: this.operationTypes,
         technicians: this.technicians,
@@ -420,7 +467,15 @@ export class OperationListComponent implements OnInit {
     }
   }
 
-  applyFilters() {
+  openSupportDialog(supportId: number) {
+    try {
+      this.dialog.open(OperationSupportDialogComponent, { width: '720px', data: { supportId } });
+    } catch (e) {
+      console.error('openSupportDialog error', e);
+    }
+  }
+
+  applyFilters(useServerReload: boolean = true) {
     // Başlangıç ve bitiş tarihlerini Date objesine çevir
     let start: Date | null = this.filterStartDate ? new Date(this.filterStartDate) : null;
     let end: Date | null = this.filterEndDate ? new Date(this.filterEndDate) : null;
@@ -429,7 +484,7 @@ export class OperationListComponent implements OnInit {
       end.setHours(23,59,59,999);
     }
 
-    this.filteredOperations = this.operations.filter(o => {
+  this.filteredOperations = this.operations.filter(o => {
       // Cihaz filtresi
       if (this.filterDeviceId && (!o.Device || o.Device.id !== this.filterDeviceId)) {
         return false;
@@ -457,7 +512,28 @@ export class OperationListComponent implements OnInit {
       return true;
     });
 
+
+
     this.pageIndex = 0;
+    // If requested, reload from server when server-side filters are in use
+    try {
+      const qp: any = {};
+      // explicitly set keys to string or null so router.merge will add/remove params correctly
+      qp.device_id = this.filterDeviceId ? String(this.filterDeviceId) : null;
+      qp.operation_type_id = this.filterOperationTypeId ? String(this.filterOperationTypeId) : null;
+      qp.support_id = this.filterSupportId ? String(this.filterSupportId) : null;
+      // keep existing queryParams but replace these
+      this.router.navigate([], { relativeTo: this.route, queryParams: qp, queryParamsHandling: 'merge' });
+    } catch (e) { /* ignore navigation errors */ }
+
+    // If we should reload from server and server-side filters are active OR were active previously, call loadOperations
+    const serverShouldFilter = !!(this.filterSupportId || this.filterDeviceId || this.filterOperationTypeId);
+    if (useServerReload && (serverShouldFilter || this.prevServerFilterActive)) {
+      this.prevServerFilterActive = serverShouldFilter;
+      this.loadOperations();
+      return;
+    }
+
     // Apply sorting to filtered list before paging
     this.applySort();
     this.updatePagedData();
@@ -515,15 +591,35 @@ export class OperationListComponent implements OnInit {
     const field = this.sort.field;
     const dir = this.sort.dir === 'asc' ? 1 : -1;
     this.filteredOperations.sort((a: any, b: any) => {
-      let va: any = '';
-      let vb: any = '';
-      if (field === 'device') { va = a.Device?.name || a.Device?.identity_no || ''; vb = b.Device?.name || b.Device?.identity_no || ''; }
-      else if (field === 'operation_type') { va = a.OperationType?.name || ''; vb = b.OperationType?.name || ''; }
-      else if (field === 'technician') { va = a.Technician?.name || ''; vb = b.Technician?.name || ''; }
-      else if (field === 'date') { va = a.date || a.created_at || a.createdAt || ''; vb = b.date || b.created_at || b.createdAt || ''; }
-      else if (field === 'status') { va = a.is_completed ? '1' : '0'; vb = b.is_completed ? '1' : '0'; }
-      else { va = a[field] ?? ''; vb = b[field] ?? ''; }
-      va = (va ?? '').toString(); vb = (vb ?? '').toString();
+      // Special-cased comparisons for known fields to ensure correct ordering
+      if (field === 'device') {
+        const va = (a.Device?.name || a.Device?.identity_no || '').toString();
+        const vb = (b.Device?.name || b.Device?.identity_no || '').toString();
+        return va.localeCompare(vb, undefined, { numeric: true }) * dir;
+      }
+      if (field === 'operation_type') {
+        const va = (a.OperationType?.name || '').toString();
+        const vb = (b.OperationType?.name || '').toString();
+        return va.localeCompare(vb, undefined, { numeric: true }) * dir;
+      }
+      if (field === 'technician') {
+        const va = (a.Technician?.name || '').toString();
+        const vb = (b.Technician?.name || '').toString();
+        return va.localeCompare(vb, undefined, { numeric: true }) * dir;
+      }
+      if (field === 'date') {
+        const ta = a.date ? new Date(a.date).getTime() : (a.created_at ? new Date(a.created_at).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0));
+        const tb = b.date ? new Date(b.date).getTime() : (b.created_at ? new Date(b.created_at).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0));
+        return (ta - tb) * dir;
+      }
+      if (field === 'status') {
+        const va = a.is_completed ? 1 : 0;
+        const vb = b.is_completed ? 1 : 0;
+        return (va - vb) * dir;
+      }
+      // Fallback: compare as strings (numeric aware)
+      const va = (a[field] ?? '').toString();
+      const vb = (b[field] ?? '').toString();
       const na = parseFloat(va.replace(/[^0-9.-]+/g, ''));
       const nb = parseFloat(vb.replace(/[^0-9.-]+/g, ''));
       if (!isNaN(na) && !isNaN(nb)) return (na - nb) * dir;
@@ -543,6 +639,33 @@ export class OperationListComponent implements OnInit {
       this.pageIndex--;
       this.updatePagedData();
     }
+  }
+
+  supportLabel(s: any) {
+    if (!s) return '';
+    // Talep eden
+    const requester = s.requested_by_employee_name || s.RequestedByEmployee?.name || s.Creator?.name || s.Creator?.username || s.created_by_user_name || s.user_name || '';
+    // Demirbaş
+    const device = s.Device ? (s.Device.name + (s.Device.identity_no ? ' (' + s.Device.identity_no + ')' : '')) : (s.device_name || '');
+    // Issue details (first 10 chars)
+    const issue = (s.issue_details || s.summary || s.title || s.issue || '').toString();
+    const issueShort = issue ? (issue.length > 10 ? issue.substring(0,10) + '...' : issue) : '';
+    // Date
+    const dt = s.created_at || s.createdAt || s.date || null;
+    let dateStr = '';
+    try {
+      if (dt) {
+        const d = new Date(dt);
+        dateStr = d.toLocaleDateString('tr-TR');
+      }
+    } catch (e) { dateStr = ''; }
+    // Build final label
+    const parts = [];
+    if (requester) parts.push(requester);
+    if (device) parts.push(device);
+    if (issueShort) parts.push(issueShort);
+    if (dateStr) parts.push(dateStr);
+    return parts.join(' - ');
   }
 
   // Filtrelenmiş tüm kayıtları yazdır / PDF'e dönüştür (tarayıcı yazdır menüsü)

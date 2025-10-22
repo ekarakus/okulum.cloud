@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDialogModule } from '@angular/material/dialog';
+import { SnackbarService } from '../services/snackbar.service';
 
 @Component({
   selector: 'app-fault-detail',
@@ -20,7 +21,8 @@ import { MatDialogModule } from '@angular/material/dialog';
       <mat-card *ngIf="fault">
         <h2>{{fault.id}} - Destek Talebi</h2>
         <p><strong>Durum:</strong> {{fault.status}}</p>
-        <p><strong>Oluşturan:</strong> {{fault.User?.name || fault.user_id}}</p>
+  <p><strong>Oluşturan:</strong> {{fault.Creator?.name || fault.Creator?.username || fault.created_by_user_id}}</p>
+  <p *ngIf="fault.requested_by_employee_name"><strong>Talep Eden Personel:</strong> {{fault.requested_by_employee_name}}</p>
         <p><strong>Detay:</strong></p>
         <p>{{fault.issue_details}}</p>
         <div *ngIf="fault.image"><a [href]="'/' + fault.image" target="_blank">Görseli Aç</a></div>
@@ -52,7 +54,8 @@ export class FaultDetailComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: any,
     @Optional() @Inject(MAT_DIALOG_DATA) public data: any,
-    @Optional() private dialogRef?: MatDialogRef<FaultDetailComponent>
+    @Optional() private dialogRef?: MatDialogRef<FaultDetailComponent>,
+    private snack?: SnackbarService
   ) {}
 
   ngOnInit(){ this.load(); }
@@ -89,7 +92,7 @@ export class FaultDetailComponent implements OnInit {
     try {
       const res: any = await this.http.patch(`${apiBase}/api/faults/${this.fault.id}/status`, { status: this.newStatus }, { headers } as any).toPromise();
   this.fault = res.fault;
-  alert('Durum güncellendi');
+  try { this.snack?.success('Durum güncellendi'); } catch(e) {}
       // if opened as dialog, notify parent
   try { if (this.dialogRef) this.dialogRef.close('updated'); } catch(e) {}
   try { this.cdr.detectChanges(); } catch(e) {}

@@ -18,12 +18,12 @@ import { apiBase } from '../runtime-config';
   imports: [CommonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, MatDatepickerModule, MatNativeDateModule, MatCheckboxModule, ReactiveFormsModule],
   providers: [provideNativeDateAdapter()],
   template: `
-    <h2 mat-dialog-title>{{ data.operation ? 'İşlem Düzenle' : 'Yeni İşlem Ekle' }}</h2>
+  <h2 mat-dialog-title>{{ (data && data.operation && data.operation.id) ? 'İşlem Düzenle' : 'İşlem Ekle' }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form" (ngSubmit)="onSave()" (keydown.enter)="onFormEnter($event)">
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Demirbaş</mat-label>
-          <mat-select formControlName="device_id" required>
+          <mat-select formControlName="device_id" required [disabled]="!!data.deviceDisabled">
             <mat-option *ngFor="let device of devices" [value]="device.id">
               {{device.name}} ({{device.identity_no}})
             </mat-option>
@@ -61,6 +61,8 @@ import { apiBase } from '../runtime-config';
             Tamamlandı mı?
           </mat-checkbox>
         </div>
+        <!-- keep support_id so edits preserve the associated fault/support record -->
+        <input type="hidden" formControlName="support_id" />
         <div style="display:none"><button type="submit"></button></div>
       </form>
     </mat-dialog-content>
@@ -87,7 +89,8 @@ export class OperationAddEditDialogComponent {
       devices?: any[],
       operationTypes?: any[],
       technicians?: any[],
-      selectedSchoolId?: number
+      selectedSchoolId?: number,
+      deviceDisabled?: boolean
     },
     @Inject(PLATFORM_ID) private platformId: Object,
     private dateAdapter: DateAdapter<any>
@@ -100,7 +103,8 @@ export class OperationAddEditDialogComponent {
       description: [data.operation?.description || ''],
       date: [data.operation?.date ? new Date(data.operation.date) : new Date(), Validators.required],
       technician_id: [data.operation?.technician_id || '', Validators.required],
-      is_completed: [data.operation?.is_completed || false]
+      is_completed: [data.operation?.is_completed || false],
+      support_id: [data.operation?.support_id || null]
     });
 
     // Use passed data or load from API
@@ -121,6 +125,14 @@ export class OperationAddEditDialogComponent {
     } else {
       this.loadTechnicians();
     }
+
+    // If caller requested the device to be disabled (preselected), disable the control
+    try {
+      if (data && data.deviceDisabled) {
+        const ctl = this.form.get('device_id');
+        if (ctl) ctl.disable({ onlySelf: true, emitEvent: false });
+      }
+    } catch (e) { /* noop */ }
   }
 
   private getToken(): string | null {
@@ -172,8 +184,12 @@ export class OperationAddEditDialogComponent {
   }
 
   onSave() {
-    if (this.form.valid) {
-      const formValue = this.form.value;
+    // Use getRawValue so disabled controls (preselected device) are included
+    const raw = this.form.getRawValue();
+    // validate required fields manually when device control is disabled
+    const valid = this.form.valid || (this.data && this.data.deviceDisabled && raw.device_id);
+    if (valid) {
+      const formValue = raw;
       // Convert date to ISO string for backend
       formValue.date = formValue.date.toISOString();
       this.dialogRef.close(formValue);
