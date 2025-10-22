@@ -5,18 +5,16 @@ exports.getAll = async (req, res) => {
     // Accept both camelCase and snake_case query params for compatibility
     const { deviceId, device_id, operationTypeId, operation_type_id, supportId, support_id, school_id } = req.query;
     
-    // Include'da Device'ı zorunlu yap ve okul filtresi ekle
+    // Include Device but do not require it — we want to return operations even when
+    // a Device is not present (some operations may be linked to a support without a device).
+    // We'll enforce school-level security using Operation.school_id which exists on the operations table.
     let includeClause = [
-      { 
-        model: Device, 
-        as: 'Device',
-        required: true // İçeride join yapıyoruz çünkü cihazın okul bilgisine ihtiyacımız var
-      },
+      { model: Device, as: 'Device', required: false },
       { model: OperationType, as: 'OperationType' },
       { model: Technician, as: 'Technician' }
     ];
-    
-    // Where koşulunu oluştur
+
+    // Where koşulunu oluştur (filters on Operation table)
     const whereCondition = {};
     // device filter (accept deviceId or device_id)
     const deviceFilter = deviceId || device_id;
@@ -33,34 +31,26 @@ exports.getAll = async (req, res) => {
     if (supportFilter) {
       whereCondition.support_id = supportFilter;
     }
-    
-    // Okul filtresi oluştur
-    let deviceWhereClause = {};
-    
-    // Super admin değilse sadece kendi okullarındaki verileri getir
+
+    // Enforce school-level access by filtering Operation.school_id (safer than requiring Device join)
     if (req.userSchools !== null && req.userSchools !== undefined) {
-      const schoolIds = req.userSchools.map(us => us.school_id);
-      if (schoolIds.length === 0) {
-        return res.json([]);
-      }
-      deviceWhereClause.school_id = schoolIds;
+      const schoolIds = req.userSchools.map(us => us.school_id).filter(Boolean);
+      if (schoolIds.length === 0) return res.json([]);
+      whereCondition.school_id = schoolIds;
     }
-    
-    // Query parameter'dan school_id gelirse
+
+    // If explicit school_id query param is provided, validate access then apply filter
     if (school_id) {
       if (req.userSchools !== null && req.userSchools !== undefined && !req.userSchools.some(us => us.school_id == school_id)) {
         return res.status(403).json({ message: 'Bu okula erişim yetkiniz yok' });
       }
-      deviceWhereClause.school_id = school_id;
+      whereCondition.school_id = school_id;
     }
-    
-    // Device include'una where koşulu ekle
-    includeClause[0].where = deviceWhereClause;
-    
+
     const operations = await Operation.findAll({
       where: whereCondition,
       include: includeClause,
-      order: [['date', 'DESC']] // En yeni en üstte
+      order: [['date', 'DESC']]
     });
     res.json(operations);
   } catch (error) {

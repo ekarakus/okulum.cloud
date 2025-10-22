@@ -93,9 +93,11 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
           <table style="width:100%; border-collapse: collapse;">
             <thead>
               <tr class="table-head-row">
-                <th style="padding:8px; width:40px;">
-                  <mat-checkbox [checked]="areAllVisibleSelected()" [indeterminate]="isSomeVisibleSelected()" (change)="toggleSelectAll($event)"></mat-checkbox>
-                </th>
+                  <th style="padding:8px; width:40px;">
+                    <ng-container *ngIf="showControls()">
+                      <mat-checkbox [checked]="areAllVisibleSelected()" [indeterminate]="isSomeVisibleSelected()" (change)="toggleSelectAll($event)"></mat-checkbox>
+                    </ng-container>
+                  </th>
                 <th class="sortable-header" (click)="onHeaderClick('issue_details')">Detay <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='issue_details'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
                 <th class="sortable-header" (click)="onHeaderClick('status')">Durum <mat-icon fontSet="material-symbols-outlined" *ngIf="sort.field==='status'">{{ sort.dir==='asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon></th>
                 <th style="padding:8px;">Görsel</th>
@@ -109,36 +111,51 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
               </tr>
             </thead>
             <tbody>
-              <tr *ngIf="pagedFaults.length === 0"><td [attr.colspan]="showActionColumn() ? 11 : 10" style="padding:20px; text-align:center; color:#666">Henüz destek talebi yok.</td></tr>
+              <tr *ngIf="pagedFaults.length === 0"><td [attr.colspan]="11" style="padding:20px; text-align:center; color:#666">Henüz destek talebi yok.</td></tr>
               <tr *ngFor="let f of pagedFaults" style="border-bottom:1px solid #eee;" (click)="onRowClick($event, f)">
+                <!-- checkbox column: always render td, but content may be empty when controls are hidden -->
                 <td style="padding:8px; width:40px;">
-                  <mat-checkbox [(ngModel)]="selectionMap[f.id]" (click)="$event.stopPropagation()"></mat-checkbox>
+                  <ng-container *ngIf="showControls()">
+                    <mat-checkbox [(ngModel)]="selectionMap[f.id]" (click)="$event.stopPropagation()"></mat-checkbox>
+                  </ng-container>
                 </td>
                 <td style="padding:8px;">{{ f.issue_details && f.issue_details.length > 50 ? (f.issue_details | slice:0:50) + '...' : f.issue_details }}</td>
-                <td style="padding:8px;">{{ statusLabel(f.status) }}</td>
+                <td style="padding:8px;"><span class="status-badge" [ngClass]="statusBadgeClass(f.status)">{{ statusLabel(f.status) }}</span></td>
                 <td style="padding:8px;"> <button mat-button *ngIf="f.image" (click)="openImage(f, $event)">Göster</button> </td>
                 <td style="padding:8px;">{{ f.Location?.name || f.location?.name || f.location_name || '' }}<span *ngIf="(f.Location?.room_number || f.location?.room_number)"> (Oda: {{f.Location?.room_number || f.location?.room_number}})</span></td>
                 <td style="padding:8px;">{{ f.Device?.name || f.device?.name || f.device_name || '' }}</td>
                 <td style="padding:8px;">{{ f.Creator?.name || f.Creator?.username || f.user_name || f.created_by_user_id || '' }}</td>
                 <td style="padding:8px; font-size:0.9rem; color:#444">{{ f.requested_by_employee_name || '' }}</td>
                 <td style="padding:8px;">{{f.created_at | date:'short'}}</td>
+                <!-- Edit column: always render td. Button shown only when canEdit(f) -->
                 <td style="padding:8px; width:64px; text-align:center;">
-                  <button mat-icon-button color="primary" (click)="openEdit(f, $event)" aria-label="Düzenle">
-                    <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
-                  </button>
+                  <ng-container *ngIf="canEdit(f)">
+                    <button mat-icon-button color="primary" (click)="openEdit(f, $event)" aria-label="Düzenle">
+                      <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
+                    </button>
+                  </ng-container>
                 </td>
-                <td *ngIf="showActionColumn()" style="padding:8px; width:120px; text-align:center; display:flex; gap:6px; justify-content:center;">
-                  <button *ngIf="isActionable(f)" mat-mini-fab color="accent" matTooltip="İşlem Ekle" (click)="onActionClick(f, $event)" aria-label="İşlem Ekle">
-                    <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
+                <!-- Action column: always render td. Internal buttons vary by permission/status -->
+                <td style="padding:8px; width:160px; text-align:center; display:flex; gap:6px; justify-content:center; align-items:center;">
+                  <!-- History button: show only for admin with permission when record status is in_progress or closed AND there are operations -->
+                  <button *ngIf="canOpenOperationsModal() && hasOperations(f) && isHistoryStatus(f)" mat-mini-fab color="secondary" matTooltip="İşlem Geçmişi" (click)="openOperationsModal(f, $event)" aria-label="İşlem Geçmişi">
+                    <mat-icon fontSet="material-symbols-outlined">history</mat-icon>
                   </button>
-                  <button *ngIf="(f.device_id || f.Device?.id)" mat-mini-fab color="primary" matTooltip="Cihazın işlemlerine git" (click)="goToDeviceOperations(f, $event)" aria-label="Cihaz İşlemleri">
-                    <ng-container *ngIf="operationCounts && operationCounts[f.id] > 0; else noCount">
-                      <span style="padding:6px 8px; font-size:0.85rem; font-weight:600; color:white">{{ operationCounts[f.id] }}</span>
-                    </ng-container>
-                    <ng-template #noCount>
-                      <mat-icon fontSet="material-symbols-outlined">open_in_new</mat-icon>
-                    </ng-template>
-                  </button>
+
+                  <!-- Normal action buttons (only show when user does NOT have the special permission) -->
+                  <ng-container *ngIf="!canOpenOperationsModal()">
+                    <button *ngIf="isActionable(f)" mat-mini-fab color="accent" matTooltip="İşlem Ekle" (click)="onActionClick(f, $event)" aria-label="İşlem Ekle">
+                      <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
+                    </button>
+                    <button *ngIf="(f.device_id || f.Device?.id)" mat-mini-fab color="primary" matTooltip="Cihazın işlemlerine git" (click)="goToDeviceOperations(f, $event)" aria-label="Cihaz İşlemleri">
+                      <ng-container *ngIf="operationCounts && operationCounts[f.id] > 0; else noCount">
+                        <span style="padding:6px 8px; font-size:0.85rem; font-weight:600; color:white">{{ operationCounts[f.id] }}</span>
+                      </ng-container>
+                      <ng-template #noCount>
+                        <mat-icon fontSet="material-symbols-outlined">open_in_new</mat-icon>
+                      </ng-template>
+                    </button>
+                  </ng-container>
                 </td>
               </tr>
             </tbody>
@@ -222,6 +239,23 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
       display: none !important;
     }
 
+    /* Status badges */
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #fff;
+      min-width: 72px;
+      text-align: center;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+    }
+    .status-pending, .status-open { background: #f6a623; /* amber */ }
+    .status-in_progress { background: #1976d2; /* blue */ }
+    .status-closed { background: #2e7d32; /* green */ }
+    .status-other { background: #9e9e9e; /* grey */ }
+
   `]
 })
 
@@ -263,7 +297,14 @@ export class FaultListComponent implements OnInit {
       const cur: any = this.auth.getCurrentUser();
       if (cur && cur.role && String(cur.role).toLowerCase() === 'super_admin') return true;
       const hasSpecial = this.permission.hasPermission('Personel Destek Talebi');
-      return !hasSpecial;
+      // Show the action column if normal controls are visible (not special-permission users)
+      // OR if the current user is an admin with the special permission so they can open the history modal.
+      if (!hasSpecial) return true;
+      // If user has the special permission, allow the action column for admins with that permission
+      try {
+        if (String(cur.role).toLowerCase() === 'admin' && this.permission.hasPermission('Personel Destek Talebi')) return true;
+      } catch (e) { /* ignore */ }
+      return false;
     } catch (e) { return true; }
   }
 
@@ -635,6 +676,8 @@ export class FaultListComponent implements OnInit {
   }
 
   toggleSelectAll(event: any) {
+    // Only allow toggle when controls are shown
+    if (!this.showControls()) return;
     const checked = !!event.checked;
     for (const f of this.pagedFaults) {
       this.selectionMap[f.id] = checked;
@@ -642,10 +685,62 @@ export class FaultListComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
+  // Only allow edit when status is NOT in_progress or closed
+  canEdit(f: any): boolean {
+    if (!f) return false;
+    const status = String(f.status || '').toLowerCase();
+    // Show edit only when status is 'pending' or legacy 'open'
+    return (status === 'pending' || status === 'open');
+  }
+
+  // Check whether current user (admin + permission) can open the operations modal
+  canOpenOperationsModal(): boolean {
+    try {
+      const cur: any = this.auth.getCurrentUser();
+      if (!cur) return false;
+      // Only admin users who have the special permission
+      if (String(cur.role).toLowerCase() !== 'admin') return false;
+      return this.permission.hasPermission('Personel Destek Talebi');
+    } catch (e) { return false; }
+  }
+
+  openOperationsModal(f: any, ev?: Event) {
+    if (ev) ev.stopPropagation();
+    try {
+      const OperationSupportDialog = import('../operation-support-dialog/operation-support-dialog.component').then(m => m.OperationSupportDialogComponent);
+      OperationSupportDialog.then((Comp: any) => {
+        this.dialog.open(Comp, { width: '720px', data: { supportId: f.id } });
+      }).catch(err => { console.error('openOperationsModal import failed', err); });
+    } catch (e) { console.error('openOperationsModal error', e); }
+  }
+
   // Determine whether the action button should be shown for a given record
   isActionable(f: any): boolean {
     if (!f) return false;
     // Only actionable when status is exactly 'in_progress'
     return String(f.status) === 'in_progress';
+  }
+
+  // Return whether this record's status qualifies for showing history (in_progress or closed)
+  isHistoryStatus(f: any): boolean {
+    if (!f) return false;
+    const s = String((f.status || '')).toLowerCase();
+    return s === 'in_progress' || s === 'closed';
+  }
+
+  // Check if we have operation counts for this support and it's > 0
+  hasOperations(f: any): boolean {
+    if (!f) return false;
+    const cnt = this.operationCounts && this.operationCounts[f.id] ? Number(this.operationCounts[f.id]) : 0;
+    return cnt > 0;
+  }
+
+  // Helper to return CSS class for a given status so we can color-code badges
+  statusBadgeClass(status: string | null | undefined): string {
+    const s = String(status || '').toLowerCase();
+    if (s === 'pending' || s === 'open') return 'status-pending';
+    if (s === 'in_progress') return 'status-in_progress';
+    if (s === 'closed') return 'status-closed';
+    return 'status-other';
   }
 }
