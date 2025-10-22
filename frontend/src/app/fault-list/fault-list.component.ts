@@ -16,7 +16,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { PermissionService } from '../services/permission.service';
 import { SnackbarService } from '../services/snackbar.service';
@@ -44,6 +44,10 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
             <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
             Destek Talebi Ekle
           </button>
+          <button mat-stroked-button color="warn" (click)="bulkDelete()" [disabled]="selectedIds.length===0" class="google-delete-btn" style="margin-left:8px">
+            <mat-icon class="google-icon" fontSet="material-symbols-outlined" aria-hidden="true">delete</mat-icon>
+            Seçilenleri Sil
+          </button>
         </div>
       </div>
 
@@ -56,11 +60,11 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
           <h2><mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon> Destek Talepleri Listesi</h2>
         </div>
 
-      <div *ngIf="showControls()" class="table-controls" style="padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:1rem; align-items:start; flex-wrap:wrap;">
-          <mat-form-field appearance="outline" style="width:280px;">
+      <div *ngIf="showControls()" class="table-controls" style="padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:0.5rem; align-items:center; flex-wrap:nowrap;">
+          <mat-form-field appearance="outline" style="width:220px;">
             <input matInput placeholder="Ara (detay)" [(ngModel)]="filters.search" (ngModelChange)="onSearchChange($event)">
           </mat-form-field>
-          <mat-form-field appearance="outline" style="width:180px;">
+          <mat-form-field appearance="outline" style="width:150px;">
             <mat-select placeholder="Durum" [(value)]="filters.status" (selectionChange)="onFilterChange()">
               <mat-option [value]="">Tümü</mat-option>
                 <mat-option value="pending">Bekliyor</mat-option>
@@ -68,10 +72,16 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
               <mat-option value="closed">Kapandı</mat-option>
             </mat-select>
           </mat-form-field>
-          <mat-form-field appearance="outline" style="width:220px;">
+          <mat-form-field appearance="outline" style="width:160px;">
             <mat-select placeholder="Oluşturan" [(value)]="filters.creator" (selectionChange)="onCreatorChange()">
               <mat-option [value]="null">Tümü</mat-option>
               <mat-option *ngFor="let c of creators" [value]="c.id">{{c.name}}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" style="width:160px;">
+            <mat-select placeholder="Cihaz" [(value)]="filters.deviceId" (selectionChange)="onDeviceChange()">
+              <mat-option [value]="null">Tümü</mat-option>
+              <mat-option *ngFor="let d of devices" [value]="d.id">{{ d.name }}<span *ngIf="d.identity_no"> ({{d.identity_no}})</span></mat-option>
             </mat-select>
           </mat-form-field>
           <div style="flex:1 1 auto"></div>
@@ -83,10 +93,7 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
               <mat-option value="closed">Kapandı</mat-option>
             </mat-select>
           </mat-form-field>
-          <button mat-stroked-button color="warn" (click)="bulkDelete()" [disabled]="selectedIds.length===0" class="google-delete-btn" style="margin-left:12px">
-            <mat-icon class="google-icon" fontSet="material-symbols-outlined" aria-hidden="true">delete</mat-icon>
-            Seçilenleri Sil
-          </button>
+
         </div>
 
         <div class="table-container">
@@ -267,7 +274,8 @@ export class FaultListComponent implements OnInit {
   isLoading = false;
   sort: { field: string | null, dir: 'asc' | 'desc' } = { field: null, dir: 'asc' };
   pageIndex = 0; pageSize = 20; totalPages = 0; totalCount = 0;
-  filters: { search: string, status: string, creator: number | null } = { search: '', status: '', creator: null };
+  filters: { search: string, status: string, creator: number | null, deviceId?: number | null } = { search: '', status: '', creator: null, deviceId: null };
+  devices: Array<any> = [];
   creators: Array<{ id: number | null, name: string }> = [];
   // displayList is the currently filtered list used for pagination
   displayList: any[] = [];
@@ -275,7 +283,7 @@ export class FaultListComponent implements OnInit {
 
   private schoolSub: any;
 
-  constructor(private http: HttpClient, private dialog: MatDialog, public router: Router, private cdr: ChangeDetectorRef, @Inject(PLATFORM_ID) private platformId: Object, private auth: AuthService, private snack: SnackbarService, private permission: PermissionService) {}
+  constructor(private http: HttpClient, private dialog: MatDialog, public router: Router, private route: ActivatedRoute, private cdr: ChangeDetectorRef, @Inject(PLATFORM_ID) private platformId: Object, private auth: AuthService, private snack: SnackbarService, private permission: PermissionService) {}
 
   // Return true when table controls should be shown. For users with the
   // "Personel Destek Talebi" permission we must NOT render the controls at all.
@@ -309,10 +317,30 @@ export class FaultListComponent implements OnInit {
   }
 
   ngOnInit(){
+    // read query params (device_id) to pre-fill device filter if present
+    try {
+      const snap = this.route.snapshot && this.route.snapshot.queryParams ? this.route.snapshot.queryParams : null;
+      if (snap && snap['device_id']) {
+        this.filters.deviceId = Number(snap['device_id']);
+      }
+    } catch (e) { /* ignore */ }
+    // also subscribe to future query param changes (e.g. back/forward navigation)
+    this.route.queryParams.subscribe(q => {
+      try {
+        if (q && q['device_id']) {
+          this.filters.deviceId = Number(q['device_id']);
+        } else {
+          // if param was removed, clear the filter
+          this.filters.deviceId = null;
+        }
+      } catch (e) { /* ignore */ }
+    });
     // subscribe to selected school so the list auto-loads when the app initialises
     this.schoolSub = this.auth.selectedSchool$.subscribe((s) => {
       // small debounce/guard: only load when we have an id
       if (s && s.id) {
+        // load available devices for filter
+        this.loadDevices(s.id);
         this.pageIndex = 0;
         this.loadFaults();
       }
@@ -367,12 +395,25 @@ export class FaultListComponent implements OnInit {
     params.set('page', String(this.pageIndex+1));
     params.set('pageSize', String(this.pageSize));
     if (this.filters.search) params.set('search', this.filters.search);
-    if (this.filters.status) params.set('status', this.filters.status);
+  if (this.filters.status) params.set('status', this.filters.status);
+  if (this.filters.deviceId) params.set('device_id', String(this.filters.deviceId));
     if (this.sort.field) { params.set('sortField', this.sort.field); params.set('sortDir', this.sort.dir); }
   const url = `${apiBase}/api/faults?${params.toString()}`;
   try { console.debug('FaultList.loadFaults URL:', url); } catch(e) {}
     this.http.get(url, { headers, responseType: 'json' } as any).subscribe({ next: (data: any) => {
-      this.faults = data.faults || [];
+      // assign raw results
+      let rawFaults = data.faults || [];
+      // If a device filter is present in the URL or UI, enforce it client-side as a fallback
+      if (this.filters && this.filters.deviceId) {
+        try {
+          const did = Number(this.filters.deviceId);
+          rawFaults = (rawFaults || []).filter((f: any) => {
+            const fid = f.device_id || f.Device?.id || null;
+            return fid && Number(fid) === did;
+          });
+        } catch (e) { /* ignore filtering errors and fall back to raw */ }
+      }
+      this.faults = rawFaults;
       this.totalCount = data.total || 0;
       this.totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
       // Build creators list from fetched faults (unique)
@@ -390,6 +431,38 @@ export class FaultListComponent implements OnInit {
     setTimeout(() => this.loadOperationCountsForVisible(), 0);
       this.isLoading=false; this.cdr.detectChanges();
     }, error: (e: any) => { console.error('load faults', e); this.isLoading=false; this.cdr.detectChanges(); } });
+  }
+
+  // Load devices for the current school so user can filter by device
+  private loadDevices(schoolId: number) {
+    if (!schoolId) { this.devices = []; return; }
+    const token = this.getToken();
+    const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined as any;
+    const url = `${apiBase}/api/devices?school_id=${encodeURIComponent(String(schoolId))}&limit=1000`;
+    this.http.get(url, { headers }).subscribe({ next: (resp:any) => {
+      // API may return array or { devices: [] }
+      const list = Array.isArray(resp) ? resp : (resp && Array.isArray(resp.devices) ? resp.devices : []);
+      this.devices = list || [];
+      // If device filter was set via query param, ensure selection stays and re-apply filters
+      if (this.filters.deviceId) {
+        // if we haven't already filtered server-side through loadFaults, call applyFilters
+        try { this.applyFilters(); } catch(e){}
+      }
+      try { this.cdr.detectChanges(); } catch(e){}
+    }, error: (err:any) => { console.error('loadDevices', err); this.devices = []; } });
+  }
+
+  onDeviceChange() {
+    this.pageIndex = 0;
+    try {
+      // update URL query param device_id (remove when null)
+      const qp: any = {};
+      if (this.filters.deviceId) qp['device_id'] = String(this.filters.deviceId);
+      else qp['device_id'] = null;
+      this.router.navigate([], { relativeTo: this.route, queryParams: qp, queryParamsHandling: 'merge', replaceUrl: true });
+    } catch (e) { console.warn('Could not update URL query param', e); }
+    // reload from server with device filter (server-side) and apply client-side fallback
+    this.loadFaults();
   }
 
   onCreatorChange() {
@@ -412,6 +485,12 @@ export class FaultListComponent implements OnInit {
         const cid = Number(this.filters.creator);
         const fid = f.Creator?.id || f.created_by_user_id || null;
         if (Number(fid) !== cid) return false;
+      }
+      // Device filter (client side fallback if server doesn't filter)
+      if (this.filters.deviceId) {
+        const did = Number(this.filters.deviceId);
+        const fid = f.device_id || f.Device?.id || null;
+        if (!fid || Number(fid) !== did) return false;
       }
       return true;
     });
@@ -445,7 +524,16 @@ export class FaultListComponent implements OnInit {
   }
 
   openAddDialog(){
-  const ref = this.dialog.open(FaultAddDialogComponent, { width: '90vw', maxWidth: '600px' });
+  // pass currently selected deviceId (if any) so the dialog can preselect location and device
+  const data: any = {};
+  if (this.filters && this.filters.deviceId) data.deviceId = this.filters.deviceId;
+  try {
+    const qp = this.route && this.route.snapshot && this.route.snapshot.queryParams ? this.route.snapshot.queryParams : null;
+    if (qp && (qp['force_device'] === 'true' || qp['force_device'] === '1' || qp['force_device'] === true)) {
+      data.forceDevice = true;
+    }
+  } catch (e) { /* ignore */ }
+  const ref = this.dialog.open(FaultAddDialogComponent, { width: '90vw', maxWidth: '600px', data });
     ref.afterClosed().subscribe(r => { if (r) this.loadFaults(); });
   }
 
@@ -465,7 +553,14 @@ export class FaultListComponent implements OnInit {
       try {
         const m = await import('../fault-add-dialog/fault-add-dialog.component');
         const Comp = m.FaultAddDialogComponent;
-  const ref = this.dialog.open(Comp, { width: '90vw', maxWidth: '720px', data: { id: f.id } });
+        // also pass current device filter and force_device flag from URL so the dialog can lock controls if requested
+        const extraData: any = { id: f.id };
+        try {
+          const qp = this.route && this.route.snapshot && this.route.snapshot.queryParams ? this.route.snapshot.queryParams : null;
+          if (qp && qp['device_id']) extraData.deviceId = Number(qp['device_id']);
+          if (qp && (qp['force_device'] === 'true' || qp['force_device'] === '1' || qp['force_device'] === true)) extraData.forceDevice = true;
+        } catch (e) { /* ignore */ }
+        const ref = this.dialog.open(Comp, { width: '90vw', maxWidth: '720px', data: extraData });
   ref.afterClosed().subscribe((r: any) => { if (r) this.loadFaults(); });
       } catch (e) {
         // fallback to route-based navigation if dialog open fails

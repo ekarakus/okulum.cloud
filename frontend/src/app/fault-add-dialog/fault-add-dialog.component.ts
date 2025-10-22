@@ -24,7 +24,7 @@ import { MatSelectModule } from '@angular/material/select';
   <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
         <mat-form-field appearance="outline">
           <mat-label>Lokasyon (zorunlu)</mat-label>
-          <input type="text" matInput [formControl]="locationCtrl" [matAutocomplete]="locAuto" placeholder="Lokasyon ara veya seç">
+          <input type="text" matInput [formControl]="locationCtrl" [matAutocomplete]="locAuto" placeholder="Lokasyon ara veya seç" [disabled]="controlsLocked">
           <mat-autocomplete #locAuto="matAutocomplete" (optionSelected)="onLocationSelected($event.option.value)" [displayWith]="displayLocation">
             <mat-option *ngFor="let l of filteredLocations" [value]="l">{{l.name}} <span *ngIf="l.room_number">(Oda: {{l.room_number}})</span></mat-option>
           </mat-autocomplete>
@@ -33,7 +33,7 @@ import { MatSelectModule } from '@angular/material/select';
 
         <mat-form-field appearance="outline">
           <mat-label>Demirbaş (zorunlu)</mat-label>
-          <input type="text" matInput [formControl]="deviceCtrl" [matAutocomplete]="devAuto" placeholder="Demirbaş ara veya seç">
+          <input type="text" matInput [formControl]="deviceCtrl" [matAutocomplete]="devAuto" placeholder="Demirbaş ara veya seç" [disabled]="controlsLocked">
           <mat-autocomplete #devAuto="matAutocomplete" (optionSelected)="onDeviceSelected($event.option.value)" [displayWith]="displayDevice">
             <mat-option *ngFor="let d of filteredDevices" [value]="d">{{d.name}} ({{d.identity_no || d.serial_no}})</mat-option>
           </mat-autocomplete>
@@ -66,7 +66,7 @@ import { MatSelectModule } from '@angular/material/select';
 
         <mat-form-field appearance="outline" *ngIf="editMode">
           <mat-label>Durum</mat-label>
-          <mat-select [(value)]="selectedStatus">
+          <mat-select [(value)]="selectedStatus" [disabled]="statusLockedForUser()">
             <mat-option value="pending">Bekliyor</mat-option>
             <mat-option value="in_progress">İşlemde</mat-option>
             <mat-option value="closed">Kapandı</mat-option>
@@ -96,6 +96,8 @@ export class FaultAddDialogComponent {
   devices: any[] = [];
   deviceId: number | null = null;
   selectedLocation: any | null = null;
+  // whether location/device controls should be locked after successful preselection
+  controlsLocked = false;
   issueDetails = '';
   imagePath: string | null = null;
   imagePreviewUrl: string | null = null;
@@ -119,7 +121,66 @@ export class FaultAddDialogComponent {
   selectedStatus: string | null = null;
 
   constructor(public dialogRef: MatDialogRef<FaultAddDialogComponent>, @Inject(MAT_DIALOG_DATA) public data: any, private http: HttpClient, private auth: AuthService, private cdr: ChangeDetectorRef, private permission: PermissionService) {
-    this.loadLocations();
+    // load locations first; if a deviceId came in via data, we'll attempt to resolve its location and preselect
+    this.loadLocations().then(() => {
+      // if the caller passed a deviceId (e.g. /faults?device_id=8), attempt to fetch that device and preselect
+      try {
+        if (this.data && this.data.deviceId) {
+          const incomingDeviceId = Number(this.data.deviceId);
+          if (!isNaN(incomingDeviceId) && incomingDeviceId) {
+            // fetch the device details to get its location
+            const token = this.getToken();
+            const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined as any;
+            const selected = this.auth.getSelectedSchool();
+            if (selected && selected.id) {
+              const url = `${apiBase}/api/devices/${encodeURIComponent(String(incomingDeviceId))}`;
+              this.http.get(url, { headers, responseType: 'json' } as any).subscribe({ next: (dev:any) => {
+                if (dev && dev.id) {
+                  // if device contains Location or location_id, set selectedLocation accordingly
+                  const loc = dev.Location || (dev.location_id ? this.locations.find((l:any)=>Number(l.id)===Number(dev.location_id)) : null);
+                  if (loc) {
+                    this.selectedLocation = loc;
+                    try { this.locationCtrl.setValue(this.selectedLocation); } catch(e){}
+                    // now load devices for that location so the device list is filtered accordingly
+                    this.onLocationSelected(this.selectedLocation).then(() => {
+                      // set the device selection in the autocomplete control
+                        this.deviceId = dev.id;
+                        const devObj = this.devices.find((d:any)=>Number(d.id)===Number(this.deviceId)) || null;
+                        try { this.deviceCtrl.setValue(devObj || ''); } catch(e){}
+                        // if caller requested forceDevice, lock both controls to prevent changes
+                        try {
+                          if (this.data && this.data.forceDevice) {
+                            this.controlsLocked = true;
+                            try { this.locationCtrl.disable(); } catch(e){}
+                            try { this.deviceCtrl.disable(); } catch(e){}
+                          }
+                        } catch (e) {}
+                        try { this.cdr.detectChanges(); } catch(e){}
+                    }).catch(() => {});
+                  } else {
+                    // no location found for device; still set device list and selection globally
+                    this.loadDevices();
+                    this.deviceId = dev.id;
+                    try { this.deviceCtrl.setValue(dev || ''); } catch(e){}
+                    try {
+                      if (this.data && this.data.forceDevice) {
+                        this.controlsLocked = true;
+                        try { this.locationCtrl.disable(); } catch(e){}
+                        try { this.deviceCtrl.disable(); } catch(e){}
+                      }
+                    } catch (e) {}
+                    try { this.cdr.detectChanges(); } catch(e){}
+                  }
+                }
+              }, error: (err:any) => {
+                // fallback: load devices list but don't preselect
+                this.loadDevices();
+              } });
+            }
+          }
+        }
+      } catch (e) { /* ignore preselect errors */ }
+    });
     this.loadEmployees();
     // watch input changes for client-side filtering
     this.locationCtrl.valueChanges.subscribe(v => {
@@ -162,6 +223,16 @@ export class FaultAddDialogComponent {
       if (!cur) return false;
       if (cur.role && String(cur.role).toLowerCase() === 'super_admin') return false;
       return this.permission && this.permission.hasPermission('Personel Destek Talebi') && String(cur.role).toLowerCase() === 'admin';
+    } catch (e) { return false; }
+  }
+
+  // If the current user is admin and has the 'Personel Destek Talebi' permission, they should not be allowed to change the status
+  statusLockedForUser(): boolean {
+    try {
+      const cur: any = this.auth.getCurrentUser();
+      if (!cur) return false;
+      if (String(cur.role || '').toLowerCase() !== 'admin') return false;
+      return this.permission && this.permission.hasPermission('Personel Destek Talebi');
     } catch (e) { return false; }
   }
 
@@ -265,6 +336,17 @@ export class FaultAddDialogComponent {
         const devObj = this.devices.find((d:any)=>Number(d.id)===Number(this.deviceId)) || null;
         try { this.deviceCtrl.setValue(devObj || ''); } catch(e){}
       }
+      // If dialog was opened with forceDevice flag and it matches the loaded device, lock controls
+      try {
+        if (this.data && this.data.forceDevice) {
+          const forcedId = this.data.deviceId ? Number(this.data.deviceId) : null;
+          if (forcedId && this.deviceId && Number(forcedId) === Number(this.deviceId)) {
+            this.controlsLocked = true;
+            try { this.locationCtrl.disable(); } catch(e){}
+            try { this.deviceCtrl.disable(); } catch(e){}
+          }
+        }
+      } catch (e) { /* ignore */ }
       // if server returned requested_by_employee_id, populate selection
       this.selectedRequestedByEmployeeId = f.requested_by_employee_id || null;
       try { this.cdr.detectChanges(); } catch(e){}

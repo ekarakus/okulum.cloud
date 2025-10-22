@@ -8,18 +8,49 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 
 import { Router } from '@angular/router';
 import { AuthService, User, School } from '../services/auth.service';
+import { PermissionService } from '../services/permission.service';
 import { environment } from '../../environments/environment';
 import { apiBase } from '../runtime-config';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatMenuModule, MatChipsModule, MatDividerModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatMenuModule, MatChipsModule, MatDividerModule, MatDialogModule],
   host: { 'ngSkipHydration': '' },
   template: `
     <div class="dashboard-container">
+
+      <!-- Personnel-support-only view: shown to users with 'Personel Destek Talebi' permission -->
+      <ng-container *ngIf="isPersonnelSupportView()">
+        <h2 class="section-title">Destek Taleplerim</h2>
+        <div class="my-supports-list">
+          <div *ngIf="mySupports && mySupports.length > 0">
+            <mat-card *ngFor="let s of mySupports" class="support-card">
+              <div class="support-row">
+                <div class="support-main">
+                  <div class="support-title">#{{ s.id }} — {{ s.issue_details || s.summary || 'Destek Talebi' }}</div>
+                  <div class="support-meta">{{ s.device_name || s.device?.name || s.device_identity || '' }} • {{ s.location_name || (s.Device && s.Device.Location && s.Device.Location.name) || '' }}</div>
+                </div>
+                <div class="support-actions">
+                  <button mat-button color="primary" (click)="openSupportModal($event, s)">İşlem Geçmişi</button>
+                  <span class="status-badge" [class]="statusBadgeClass(s.status)">{{ statusLabel(s.status) }}</span>
+                </div>
+              </div>
+            </mat-card>
+          </div>
+          <div *ngIf="!mySupports || mySupports.length === 0" class="no-data">
+            <p>Henüz oluşturduğunuz destek talebi bulunmamaktadır.</p>
+            <button mat-stroked-button color="primary" (click)="navigateTo('/faults')">Yeni Destek Talebi Oluştur</button>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Default full dashboard (shown when not personnel-support user) -->
+      <ng-container *ngIf="!isPersonnelSupportView()">
 
       <!-- Ana İstatistikler - 3'lü Grid -->
       <div class="main-stats-section">
@@ -141,7 +172,7 @@ import { apiBase } from '../runtime-config';
         </div>
       </div>
 
-      <!-- Hızlı İşlemler -->
+  <!-- Hızlı İşlemler -->
       <div class="quick-operations-section">
         <h2 class="section-title">⚡ Hızlı İşlemler</h2>
         <div class="quick-operations-grid">
@@ -205,7 +236,9 @@ import { apiBase } from '../runtime-config';
             </mat-card-content>
           </mat-card>
         </div>
-      </div>
+  </div>
+
+  </ng-container>
 
     </div>
   `,
@@ -288,6 +321,18 @@ import { apiBase } from '../runtime-config';
       align-items: center;
       gap: 8px;
     }
+
+    .my-supports-list { margin-bottom: 16px; }
+    .support-card { margin-bottom: 12px; padding: 12px; border-radius: 10px; }
+    .support-row { display:flex; align-items:center; justify-content:space-between; }
+    .support-main { flex:1; }
+    .support-title { font-weight:600; }
+    .support-meta { font-size:0.9rem; color:#666; }
+    .support-actions { display:flex; align-items:center; gap:12px; }
+    .status-badge { padding:6px 10px; border-radius:12px; font-weight:600; }
+    .status-badge.pending { background:#fff3cd; color:#856404; }
+    .status-badge.inprogress { background:#cce5ff; color:#004085; }
+    .status-badge.closed { background:#d4edda; color:#155724; }
 
     @media (max-width: 768px) {
       .section-title {
@@ -1030,11 +1075,15 @@ export class DashboardComponent implements OnInit {
     this.router.navigate([route]);
   }
 
+  mySupports: any[] = [];
+
   constructor(
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private permission: PermissionService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit() {
@@ -1049,6 +1098,13 @@ export class DashboardComponent implements OnInit {
       } catch (e) {
         console.warn('Could not log permissions', e);
       }
+      // Whenever the current user changes, refresh the mySupports list if needed
+      if (this.isPersonnelSupportView()) {
+        // small async delay to ensure selectedSchool is set
+        setTimeout(() => this.loadMySupports(), 0);
+      } else {
+        this.mySupports = [];
+      }
     });
 
     this.authService.selectedSchool$.subscribe(school => {
@@ -1057,6 +1113,12 @@ export class DashboardComponent implements OnInit {
       this.loadDashboardStats();
       this.loadRecentDevices();
       this.loadRecentOperations();
+      // If user is personnel-support, also load their supports
+      if (this.isPersonnelSupportView()) {
+        this.loadMySupports();
+      } else {
+        this.mySupports = [];
+      }
     });
   }  private loadDashboardStats() {
     const token = this.authService.getToken();
@@ -1083,6 +1145,64 @@ export class DashboardComponent implements OnInit {
         }
       });
     }
+  }
+
+  isPersonnelSupportView(): boolean {
+    try {
+      const cur = this.authService.getCurrentUser();
+      if (!cur) return false;
+      // Require admin role and the special permission OR any user (non-superadmin) who has the permission
+      if (String(cur.role).toLowerCase() === 'super_admin') return false;
+      return this.permission.hasPermission('Personel Destek Talebi');
+    } catch (e) { return false; }
+  }
+
+  statusLabel(status: any): string {
+    if (!status) return '';
+    const s = String(status).toLowerCase();
+    if (s === 'pending' || s === 'open') return 'Bekliyor';
+    if (s === 'in_progress') return 'İşlemde';
+    if (s === 'closed') return 'Kapandı';
+    return status;
+  }
+
+  statusBadgeClass(status: any): string {
+    const s = (status||'').toString().toLowerCase();
+    if (s === 'pending' || s === 'open') return 'status-badge pending';
+    if (s === 'in_progress') return 'status-badge inprogress';
+    if (s === 'closed') return 'status-badge closed';
+    return 'status-badge';
+  }
+
+  private loadMySupports() {
+    const token = this.authService.getToken();
+    if (!token) return;
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    let url = `${apiBase}/api/faults`;
+    const params: string[] = [];
+    if (this.selectedSchool) params.push(`school_id=${this.selectedSchool.id}`);
+    const cur = this.authService.getCurrentUser();
+    if (cur && cur.id) {
+      // backend may accept different param names for filtering by creator; include common variants
+      params.push(`created_by_user_id=${cur.id}`);
+      params.push(`created_by_id=${cur.id}`);
+      params.push(`user_id=${cur.id}`);
+      params.push(`requested_by_user_id=${cur.id}`);
+    }
+    if (params.length) url += `?${params.join('&')}`;
+    this.http.get(url, { headers }).subscribe({ next: (data: any) => {
+      this.mySupports = Array.isArray(data?.faults) ? data.faults : (Array.isArray(data) ? data : []);
+      this.cdr.detectChanges();
+    }, error: (err) => { console.error('loadMySupports', err); this.mySupports = []; this.cdr.detectChanges(); } });
+  }
+
+  openSupportModal(ev: Event, s: any) {
+    if (ev) ev.stopPropagation();
+    try {
+      import('../operation-support-dialog/operation-support-dialog.component').then(m => m.OperationSupportDialogComponent).then(cmp => {
+        this.dialog.open(cmp, { width: '720px', data: { supportId: s.id } });
+      }).catch(err => console.error('openSupportModal import failed', err));
+    } catch (e) { console.error('openSupportModal', e); }
   }
 
   // Preview state
