@@ -1,6 +1,7 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { SidebarService } from './sidebar.service';
 
 @Component({
   selector: 'app-public-device-layout',
@@ -23,4 +24,11 @@ import { CommonModule } from '@angular/common';
     .public-footer { text-align:center; padding: 1rem; font-size: 0.75rem; color:#777; }
   `]
 })
-export class PublicDeviceLayoutComponent { year = new Date().getFullYear(); }
+export class PublicDeviceLayoutComponent implements OnInit {
+  year = new Date().getFullYear();
+  constructor(private sidebar: SidebarService) {}
+  ngOnInit() {
+    // Ensure the global sidebar is hidden for this public device-detail layout
+    try { this.sidebar.setVisible(false); } catch (e) { /* ignore */ }
+  }
+}

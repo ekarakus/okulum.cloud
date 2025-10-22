@@ -3,7 +3,8 @@ const router = express.Router();
 const operationController = require('../controllers/operationController');
 const { authenticateToken } = require('../middleware/auth');
 
-router.get('/', authenticateToken, operationController.getAll);
+// Allow anonymous reads (public device pages should be able to list operations)
+router.get('/', operationController.getAll);
 router.get('/recent', authenticateToken, operationController.getRecent);
 router.post('/counts', authenticateToken, operationController.countBySupportIds);
 router.post('/', authenticateToken, operationController.create);

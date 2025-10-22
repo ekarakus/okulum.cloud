@@ -19,7 +19,7 @@ import { environment } from '../../environments/environment';
   template: `
     <div class="device-detail-container">
       <!-- Header -->
-      <mat-card class="header-card">
+      <mat-card class="header-card" style="margin-bottom: 20px;">
         <div class="header-content">
           <button *ngIf="isLoggedIn" mat-icon-button (click)="goBack()" class="back-button">
             <span class="material-symbols-outlined">arrow_back</span>
@@ -29,6 +29,12 @@ import { environment } from '../../environments/environment';
             <div class="device-title">
               <h1>{{ device?.name || 'Demirbaş Detayı' }}</h1>
               <p class="device-subtitle">{{ device?.identity_no }}</p>
+            </div>
+            <div class="header-actions">
+              <button mat-raised-button color="primary" class="create-support-btn create-support-btn--prominent" (click)="createSupport()" aria-label="Destek talebi oluştur">
+                <span class="material-symbols-outlined">support_agent</span>
+                <span class="btn-text">Destek talebi oluştur</span>
+              </button>
             </div>
           </div>
         </div>
@@ -135,7 +141,7 @@ import { environment } from '../../environments/environment';
             <mat-card-header>
               <span class="material-symbols-outlined card-icon">history</span>
               <mat-card-title>İşlem Geçmişi</mat-card-title>
-              <div class="operations-count">{{ operations.length }} işlem</div>
+                <div class="operations-count">{{ operations.length }} işlem</div>
             </mat-card-header>
             <mat-divider></mat-divider>
             <mat-card-content>
@@ -191,27 +197,65 @@ import { environment } from '../../environments/environment';
       padding: 24px 20px;
     }
 
-    .header-card {
-      margin-bottom: 32px;
-      padding: 4px;
-    }
-
-    .header-content {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      padding: 16px 20px;
-    }
-
-    .back-button {
-      flex-shrink: 0;
-    }
-
-    .header-info {
+    /* Header layout: prefer single-line on desktop; wrap on smaller screens without horizontal scroll */
+    .header-card .header-content {
       display: flex;
       align-items: center;
       gap: 16px;
-      flex: 1;
+      flex-wrap: nowrap; /* prefer single line on larger screens */
+      padding: 12px 16px;
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto; /* do not grow/shrink, keep on the same row */
+    }
+
+    /* Prominent create support button: large, full-height, non-white background */
+    .create-support-btn {
+      margin-left: 12px;
+      height: 100%;
+      min-height: 64px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 0 20px;
+      align-self: stretch;
+    }
+    /* override material background to ensure it's not white */
+    .create-support-btn.mat-raised-button {
+      background: linear-gradient(180deg,#4454e6 0%, #2f3bb3 100%) !important;
+      color: #fff !important;
+      box-shadow: 0 10px 28px rgba(68,84,230,0.28) !important;
+    }
+    .create-support-btn .material-symbols-outlined { font-size: 26px; }
+    .create-support-btn .btn-text { display: inline-block; font-size: 1.02rem; }
+    .create-support-btn--prominent { transform: translateY(0); }
+
+    /* header-info should allow its children to shrink without forcing a wrap */
+    .header-info { display: flex; align-items: center; gap: 16px; flex: 1 1 auto; min-width: 0; }
+
+    /* Make title and subtitle stay on one line with ellipsis for overflow */
+    .device-title { display: flex; flex-direction: row; align-items: center; gap: 12px; min-width: 0; }
+    .device-title h1,
+    .device-subtitle {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 0;
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .header-info.no-margin {
@@ -437,6 +481,22 @@ import { environment } from '../../environments/environment';
       padding: 24px 16px;
     }
 
+    .create-support-btn {
+      margin-left: 12px;
+      height: 100%;
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 0 20px;
+      align-self: stretch;
+      flex: 0 0 auto; /* keep button on single row */
+      white-space: nowrap;
+    }
+
     .operation-item {
       display: flex;
       gap: 20px;
@@ -560,7 +620,7 @@ import { environment } from '../../environments/environment';
     }
 
     /* Mobile Responsive */
-    @media (max-width: 1024px) {
+    @media (max-width: 768px) {
       .main-content {
         grid-template-columns: 1fr;
         gap: 24px;
@@ -569,10 +629,38 @@ import { environment } from '../../environments/environment';
       .device-detail-container {
         max-width: 100%;
         padding: 20px 16px;
+      /* On small screens wrap header content into multiple rows instead of allowing horizontal scroll */
+      .header-card .header-content {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 12px;
       }
 
-      .header-content {
-        padding: 16px;
+      .header-info {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+
+      .header-actions {
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-end;
+        margin-top: 8px;
+      }
+
+      /* Make the create button stack nicely and avoid overflow */
+      .create-support-btn {
+        width: 100%;
+        min-height: 48px;
+        justify-content: center;
+      }
+      }
+
+      /* Ensure the create button is alone on its row and visually centered on small devices */
+      @media (max-width: 480px) {
+        .header-card .header-content { gap: 10px; }
+        .header-actions { width: 100%; display: flex; justify-content: center; }
+        .create-support-btn { max-width: 420px; width: calc(100% - 32px); }
       }
 
       .info-section {
@@ -789,12 +877,12 @@ export class DeviceDetailComponent implements OnInit {
   }
 
   loadDeviceOperations() {
-    const options: any = {};
-    if (this.isLoggedIn) {
-      options.headers = this.getHeaders();
-    }
+    // Always attempt to load operations for this device. If a token exists include it,
+    // otherwise perform an anonymous request so public device pages show their history.
+    const token = this.getToken();
+    const options: any = token ? { headers: this.getHeaders() } : {};
 
-  this.http.get(`${apiBase}/api/operations?deviceId=${this.deviceId}`, options)
+    this.http.get(`${apiBase}/api/operations?deviceId=${this.deviceId}`, options)
       .subscribe({
         next: (response: any) => {
           this.operations = response.sort((a: any, b: any) => {
@@ -820,5 +908,14 @@ export class DeviceDetailComponent implements OnInit {
     } else {
       window.history.back();
     }
+  }
+
+  createSupport() {
+    try {
+      const id = this.deviceId;
+      if (!id) return;
+      // navigate to faults with query params
+      this.router.navigate(['/faults'], { queryParams: { force_device: 'true', device_id: String(id) } });
+    } catch (e) { console.error('createSupport navigation error', e); }
   }
 }

@@ -15,7 +15,7 @@ app.use(express.json());
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - auth:${req.headers['authorization'] ? 'yes' : 'no'}`);
   next();
 });
 

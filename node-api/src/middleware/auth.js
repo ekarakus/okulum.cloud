@@ -3,6 +3,7 @@ const { User, UserSchool } = require('../models/relations');
 
 // JWT token doğrulama
 const authenticateToken = async (req, res, next) => {
+  console.debug('authenticateToken called for', req.method, req.url);
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
