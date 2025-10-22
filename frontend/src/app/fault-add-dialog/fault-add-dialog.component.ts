@@ -5,6 +5,7 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/materia
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { apiBase } from '../runtime-config';
 import { AuthService } from '../services/auth.service';
+import { PermissionService } from '../services/permission.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -44,13 +45,24 @@ import { MatSelectModule } from '@angular/material/select';
   <div style="font-size:0.85rem; color:#666; margin-top:6px;">Not: Detay en az 10 karakter olmalıdır.</div>
         <div *ngIf="submittedAttempt && (!issueDetails || issueDetails.trim().length < 10)" style="color:#b00020; font-size:0.9rem; margin-top:-8px;">Detay en az 10 karakter olmalı.</div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Talep Eden Personel (opsiyonel)</mat-label>
-          <mat-select [(value)]="selectedRequestedByEmployeeId">
-            <mat-option [value]="null">Tümü / Seçme</mat-option>
-            <mat-option *ngFor="let e of employees" [value]="e.id">{{ e.name || e.full_name || ('#' + e.id) }}</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <ng-container *ngIf="!shouldRestrictRequestedBy(); else restrictedRequestedBy">
+          <mat-form-field appearance="outline">
+            <mat-label>Talep Eden Personel (opsiyonel)</mat-label>
+            <mat-select [(value)]="selectedRequestedByEmployeeId">
+              <mat-option [value]="null">Tümü / Seçme</mat-option>
+              <mat-option *ngFor="let e of employees" [value]="e.id">{{ e.name || e.full_name || ('#' + e.id) }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
+        <ng-template #restrictedRequestedBy>
+          <mat-form-field appearance="outline">
+            <mat-label>Talep Eden Personel</mat-label>
+            <mat-select [(value)]="selectedRequestedByEmployeeId" [disabled]="true" required>
+              <mat-option *ngFor="let e of employees" [value]="e.id">{{ e.name || e.full_name || ('#' + e.id) }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <div *ngIf="submittedAttempt && !selectedRequestedByEmployeeId" style="color:#b00020; font-size:0.9rem; margin-top:-8px;">Talep eden personel seçimi zorunludur.</div>
+        </ng-template>
 
         <mat-form-field appearance="outline" *ngIf="editMode">
           <mat-label>Durum</mat-label>
@@ -106,7 +118,7 @@ export class FaultAddDialogComponent {
   faultId: number | null = null;
   selectedStatus: string | null = null;
 
-  constructor(public dialogRef: MatDialogRef<FaultAddDialogComponent>, @Inject(MAT_DIALOG_DATA) public data: any, private http: HttpClient, private auth: AuthService, private cdr: ChangeDetectorRef) {
+  constructor(public dialogRef: MatDialogRef<FaultAddDialogComponent>, @Inject(MAT_DIALOG_DATA) public data: any, private http: HttpClient, private auth: AuthService, private cdr: ChangeDetectorRef, private permission: PermissionService) {
     this.loadLocations();
     this.loadEmployees();
     // watch input changes for client-side filtering
@@ -142,6 +154,17 @@ export class FaultAddDialogComponent {
   }
   submittedAttempt = false;
 
+  // helper to determine whether the logged-in user should be restricted to only their own
+  // entry in the 'Talep Eden Personel' select (admin + Personel Destek Talebi)
+  shouldRestrictRequestedBy(): boolean {
+    try {
+      const cur: any = this.auth.getCurrentUser();
+      if (!cur) return false;
+      if (cur.role && String(cur.role).toLowerCase() === 'super_admin') return false;
+      return this.permission && this.permission.hasPermission('Personel Destek Talebi') && String(cur.role).toLowerCase() === 'admin';
+    } catch (e) { return false; }
+  }
+
   private getToken(): string | null { return this.auth.getToken(); }
 
   loadDevices() {
@@ -172,7 +195,40 @@ export class FaultAddDialogComponent {
     if (!selected) return;
     const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
   const url = `${apiBase}/api/school-employees/school/${selected.id}`;
-    this.http.get(url, { headers, responseType: 'json' } as any).subscribe({ next: (d:any) => { this.employees = Array.isArray(d) ? d : []; }, error: (e:any) => { console.error('load employees', e); this.employees = []; } });
+    this.http.get(url, { headers, responseType: 'json' } as any).subscribe({ next: (d:any) => {
+      this.employees = Array.isArray(d) ? d : [];
+      try {
+        // If the current user has the special "Personel Destek Talebi" permission,
+        // restrict the select options to only the logged-in user's employee entry.
+        const cur = this.auth.getCurrentUser();
+        if (cur && this.permission && this.permission.hasPermission('Personel Destek Talebi')) {
+          // If super_admin, don't restrict
+          if (cur.role && String(cur.role).toLowerCase() === 'super_admin') {
+            // no restriction
+          } else {
+            const match = this.employees.find((e: any) => {
+              if (!e) return false;
+              if (e.email && cur.email && String(e.email).toLowerCase() === String(cur.email).toLowerCase()) return true;
+              if (e.name && cur.name && String(e.name).toLowerCase() === String(cur.name).toLowerCase()) return true;
+              const curAny: any = cur as any;
+              if (e.id && (curAny.school_employee_id || curAny.employee_id) && (Number(e.id) === Number(curAny.school_employee_id) || Number(e.id) === Number(curAny.employee_id))) return true;
+              return false;
+            });
+            if (match) {
+              this.employees = [match];
+              this.selectedRequestedByEmployeeId = match.id || null;
+            } else {
+              // create a synthetic single-option entry so the select shows the current user
+              const curAny: any = cur as any;
+              const synthetic: any = { id: null, name: cur.name || (curAny.full_name || ''), email: cur.email || '' };
+              this.employees = [synthetic];
+              // set selectedRequestedByEmployeeId to null which will match the synthetic option's value
+              this.selectedRequestedByEmployeeId = null;
+            }
+          }
+        }
+      } catch (e) { /* swallow */ }
+    }, error: (e:any) => { console.error('load employees', e); this.employees = []; } });
   }
 
   async loadForEdit(id: number) {
@@ -254,6 +310,8 @@ export class FaultAddDialogComponent {
     if (!this.selectedLocation) return false;
     if (!this.deviceId) return false;
     if (!this.issueDetails || this.issueDetails.trim().length < 10) return false;
+    // if restriction applies, requestedBy must be chosen
+    if (this.shouldRestrictRequestedBy() && !this.selectedRequestedByEmployeeId) return false;
     return true;
   }
 

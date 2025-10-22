@@ -18,6 +18,7 @@ import { MatOptionModule } from '@angular/material/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { PermissionService } from '../services/permission.service';
 import { SnackbarService } from '../services/snackbar.service';
 import { FaultAddDialogComponent } from '../fault-add-dialog/fault-add-dialog.component';
 import { OperationCreateDialogComponent } from '../operation-create-dialog/operation-create-dialog.component';
@@ -55,7 +56,7 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
           <h2><mat-icon fontSet="material-symbols-outlined">format_list_bulleted</mat-icon> Destek Talepleri Listesi</h2>
         </div>
 
-        <div class="table-controls" style="padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:1rem; align-items:start; flex-wrap:wrap;">
+      <div *ngIf="showControls()" class="table-controls" style="padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:1rem; align-items:start; flex-wrap:wrap;">
           <mat-form-field appearance="outline" style="width:280px;">
             <input matInput placeholder="Ara (detay)" [(ngModel)]="filters.search" (ngModelChange)="onSearchChange($event)">
           </mat-form-field>
@@ -108,7 +109,7 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
               </tr>
             </thead>
             <tbody>
-              <tr *ngIf="pagedFaults.length === 0"><td colspan="11" style="padding:20px; text-align:center; color:#666">Henüz destek talebi yok.</td></tr>
+              <tr *ngIf="pagedFaults.length === 0"><td [attr.colspan]="showActionColumn() ? 11 : 10" style="padding:20px; text-align:center; color:#666">Henüz destek talebi yok.</td></tr>
               <tr *ngFor="let f of pagedFaults" style="border-bottom:1px solid #eee;" (click)="onRowClick($event, f)">
                 <td style="padding:8px; width:40px;">
                   <mat-checkbox [(ngModel)]="selectionMap[f.id]" (click)="$event.stopPropagation()"></mat-checkbox>
@@ -126,7 +127,7 @@ import { OperationCreateDialogComponent } from '../operation-create-dialog/opera
                     <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
                   </button>
                 </td>
-                <td style="padding:8px; width:120px; text-align:center; display:flex; gap:6px; justify-content:center;">
+                <td *ngIf="showActionColumn()" style="padding:8px; width:120px; text-align:center; display:flex; gap:6px; justify-content:center;">
                   <button *ngIf="isActionable(f)" mat-mini-fab color="accent" matTooltip="İşlem Ekle" (click)="onActionClick(f, $event)" aria-label="İşlem Ekle">
                     <mat-icon fontSet="material-symbols-outlined">add</mat-icon>
                   </button>
@@ -240,7 +241,31 @@ export class FaultListComponent implements OnInit {
 
   private schoolSub: any;
 
-  constructor(private http: HttpClient, private dialog: MatDialog, public router: Router, private cdr: ChangeDetectorRef, @Inject(PLATFORM_ID) private platformId: Object, private auth: AuthService, private snack: SnackbarService) {}
+  constructor(private http: HttpClient, private dialog: MatDialog, public router: Router, private cdr: ChangeDetectorRef, @Inject(PLATFORM_ID) private platformId: Object, private auth: AuthService, private snack: SnackbarService, private permission: PermissionService) {}
+
+  // Return true when table controls should be shown. For users with the
+  // "Personel Destek Talebi" permission we must NOT render the controls at all.
+  showControls(): boolean {
+    try {
+      const cur: any = this.auth.getCurrentUser();
+      // super_admin always sees full controls
+      if (cur && cur.role && String(cur.role).toLowerCase() === 'super_admin') return true;
+      const hasSpecial = this.permission.hasPermission('Personel Destek Talebi');
+      // If user has the special permission, we must restrict (do not show controls).
+      // Otherwise show all controls (covers admin without the permission and other roles without it).
+      return !hasSpecial;
+    } catch (e) { return true; }
+  }
+
+  // Return whether the action column should be rendered. Same rule as controls.
+  showActionColumn(): boolean {
+    try {
+      const cur: any = this.auth.getCurrentUser();
+      if (cur && cur.role && String(cur.role).toLowerCase() === 'super_admin') return true;
+      const hasSpecial = this.permission.hasPermission('Personel Destek Talebi');
+      return !hasSpecial;
+    } catch (e) { return true; }
+  }
 
   ngOnInit(){
     // subscribe to selected school so the list auto-loads when the app initialises
@@ -349,6 +374,26 @@ export class FaultListComponent implements OnInit {
       }
       return true;
     });
+
+    // If current user is admin and has the special 'Personel Destek Talebi' permission,
+    // restrict the visible list to only the faults they requested.
+    try {
+      const cur: any = this.auth.getCurrentUser();
+      if (cur && String(cur.role).toLowerCase() === 'admin' && this.permission && this.permission.hasPermission('Personel Destek Talebi')) {
+        const curAny: any = cur as any;
+        list = list.filter((f: any) => {
+          // prefer numeric id matching if available
+          if (f.requested_by_employee_id && (curAny.school_employee_id || curAny.employee_id)) {
+            if (Number(f.requested_by_employee_id) === Number(curAny.school_employee_id || curAny.employee_id)) return true;
+          }
+          // fallback to email match
+          if (f.requested_by_employee_email && cur.email && String(f.requested_by_employee_email).toLowerCase() === String(cur.email).toLowerCase()) return true;
+          // fallback to name match
+          if (f.requested_by_employee_name && cur.name && String(f.requested_by_employee_name).toLowerCase() === String(cur.name).toLowerCase()) return true;
+          return false;
+        });
+      }
+    } catch (e) { /* ignore and proceed with unfiltered list */ }
 
     // No grouping: set display list and pagination based on filtered results
     this.displayList = list;
