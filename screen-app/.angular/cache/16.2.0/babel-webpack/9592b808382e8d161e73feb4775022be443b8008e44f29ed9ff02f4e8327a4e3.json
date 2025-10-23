@@ -1,0 +1,1 @@
+{"ast":null,"code":"/** Polyfills for the minimal example app */\n// Zone JS is required by default for Angular itself.\nimport 'zone.js';","map":null,"metadata":{},"sourceType":"module","externalDependencies":[]}

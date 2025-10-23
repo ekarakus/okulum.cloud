@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en" data-critters-container>
+<head>
+  <meta charset="utf-8">
+  <title>Screen App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script>
+    // default runtime config (overridden by main.ts fetch of /assets/config.json)
+    window.__API_BASE__ = window.__API_BASE__ || 'http://localhost:3000/api';
+    window.__SCHOOL_ID__ = window.__SCHOOL_ID__ || 1;
+  </script>
+<style>body{margin:0;font-family:Arial,Helvetica,sans-serif}app-root{display:block}</style><link rel="stylesheet" href="styles.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="styles.css"></noscript></head>
+<body>
+  <app-root></app-root>
+<script src="runtime.js" type="module"></script><script src="polyfills.js" type="module"></script><script src="main.js" type="module"></script></body>
+</html>

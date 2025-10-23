@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Screen App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script>
+    // default runtime config (overridden by main.ts fetch of /assets/config.json)
+    window.__API_BASE__ = window.__API_BASE__ || 'http://localhost:3000/api';
+    window.__SCHOOL_ID__ = window.__SCHOOL_ID__ || 1;
+  </script>
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>

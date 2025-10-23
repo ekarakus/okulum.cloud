@@ -1,0 +1,6 @@
+{
+  "guards": [
+    { "name": "Ahmet Yılmaz", "location": "Giriş", "shift": "08:30-09:30" },
+    { "name": "Selin Kaya", "location": "Bahçe", "shift": "09:30-10:30" }
+  ]
+}

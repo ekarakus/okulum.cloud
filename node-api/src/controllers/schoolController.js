@@ -317,3 +317,23 @@ exports.getSchoolStats = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Public: get school by code (no auth) - returns minimal school info
+exports.getSchoolByCode = async (req, res) => {
+  try {
+    const { code } = req.params;
+    if (!code) return res.status(400).json({ message: 'code is required' });
+
+    const school = await School.findOne({
+      where: { code },
+      attributes: ['id', 'name', 'code', 'logo_path', 'province_id', 'district_id', 'start_time', 'lesson_duration_minutes', 'break_duration_minutes', 'is_double_shift']
+    });
+
+    if (!school) return res.status(404).json({ message: 'Okul bulunamadı' });
+
+    res.json(school);
+  } catch (err) {
+    console.error('Error fetching school by code:', err);
+    res.status(500).json({ error: err.message });
+  }
+};

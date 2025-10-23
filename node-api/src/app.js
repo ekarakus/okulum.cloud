@@ -30,6 +30,14 @@ app.use('/api/auth', authRouter);
 // School route
 const schoolRouter = require('./routes/schoolRoutes');
 app.use('/api/schools', schoolRouter);
+// Public school lookup (by code) - used by kiosks and public pages
+const publicSchoolRouter = require('./routes/publicSchoolRoutes');
+app.use('/api/public/schools', publicSchoolRouter);
+// Public routes for kiosk: duty schedules and students
+const publicDutyRouter = require('./routes/publicDutyRoutes');
+app.use('/api/public/duty-schedule', publicDutyRouter);
+const publicStudentRouter = require('./routes/publicStudentRoutes');
+app.use('/api/public/students', publicStudentRouter);
 // Ensure observances import endpoint is reachable (explicit mount)
 const schoolObservancesCtrl = require('./controllers/schoolObservancesController');
 const { authenticateToken, checkSchoolAccess } = require('./middleware/auth');

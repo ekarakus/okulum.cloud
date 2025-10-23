@@ -1,10 +1,16 @@
+version: "3.9"
+
 services:
   python-app:
     build: ./python-app
     container_name: python-app
     ports:
       - "5000:5000"
+    depends_on:
+      - node-api
     restart: always
+    networks:
+      - app-network
 
   node-api:
     build: ./node-api
@@ -13,25 +19,62 @@ services:
       - "3000:3000"
     depends_on:
       - mysql
-      - python-app
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=12345
+      - DB_NAME=okul_yonetim
     restart: always
+    networks:
+      - app-network
 
   mysql:
     image: mysql:8
     container_name: mysql
     environment:
       MYSQL_ROOT_PASSWORD: 12345
-      MYSQL_DATABASE: myapp
+      MYSQL_DATABASE: okul_yonetim
     ports:
       - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
     restart: always
+    networks:
+      - app-network
 
   frontend:
     build: ./frontend
     container_name: frontend
+    restart: always
+    networks:
+      - app-network
+
+  screen-app:
+    build: ./screen-app
+    container_name: screen-app
+    restart: always
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
     ports:
       - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
+      - frontend
+      - screen-app
       - node-api
     restart: always
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+
+networks:
+  app-network:
+    driver: bridge
 
