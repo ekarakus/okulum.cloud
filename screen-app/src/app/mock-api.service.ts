@@ -47,19 +47,18 @@ export class MockApiService {
     }
   }
 
-  // Duty schedule
-  async getDuty(school_id?: number, shift?: string|number): Promise<any> {
-    // call public duty schedule route
-    const params = school_id ? new HttpParams().set('shift', String(shift || 1)) : undefined;
+  // Duty schedule - now gets complete roster (all shifts)
+  async getDuty(school_id?: number): Promise<any[]> {
+    // call public duty roster route (no shift parameter needed)
     const id = school_id ? String(school_id) : '';
     const type = 'duty';
     try{
-      const res = await this.http.get<any>(`${this.base}/public/duty-schedule/${encodeURIComponent(id)}`, { params }).toPromise();
+      const res = await this.http.get<any[]>(`${this.base}/public/duty-schedule/roster/${encodeURIComponent(id)}`).toPromise();
       await this.cache.set(school_id, type, res);
       return res;
     }catch(err){
       const cached = await this.cache.get(school_id, type);
-      return cached;
+      return cached || [];
     }
   }
 

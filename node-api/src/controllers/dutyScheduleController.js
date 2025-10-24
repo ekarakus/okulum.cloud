@@ -1,4 +1,4 @@
-const { sequelize, DutySchedule, DutyScheduleAssignment, DutyLocation, SchoolEmployee } = require('../models/relations');
+const { sequelize, DutySchedule, DutyScheduleAssignment, DutyLocation, SchoolEmployee, EmployeeType } = require('../models/relations');
 const { Op } = require('sequelize');
 
 exports.create = async (req, res) => {
@@ -59,8 +59,13 @@ exports.getCurrent = async (req, res) => {
     const { school_id } = req.params;
     const { shift } = req.query;
     if (!school_id || !shift) return res.status(400).json({ message: 'school_id ve shift gerekli' });
+
+    // Map shift number to string
+    const shiftMap = { '1': 'morning', '2': 'afternoon' };
+    const shiftValue = shiftMap[shift] || shift;
+
     const schedule = await DutySchedule.findOne({
-      where: { school_id, shift, is_active: true },
+      where: { school_id, shift: shiftValue, is_active: true },
       include: [{
         model: DutyScheduleAssignment,
         as: 'Assignments',
@@ -151,18 +156,60 @@ exports.update = async (req, res) => {
   }
 };
 
-exports.remove = async (req, res) => {
-  const t = await sequelize.transaction();
+exports.getRoster = async (req, res) => {
   try {
-    const { id } = req.params;
-    const item = await DutySchedule.findByPk(id);
-    if (!item) return res.status(404).json({ message: 'Plan bulunamadı' });
-    await item.destroy({ transaction: t });
-    await t.commit();
-    res.json({ message: 'Silindi' });
+    const { school_id } = req.params;
+    if (!school_id) return res.status(400).json({ message: 'school_id gerekli' });
+
+    // Get all active duty schedules for the school (no day filtering on API side)
+    const schedules = await DutySchedule.findAll({
+      where: { school_id, is_active: true },
+      include: [{
+        model: DutyScheduleAssignment,
+        as: 'Assignments',
+        include: [
+          { model: DutyLocation, as: 'DutyLocation' },
+          { 
+            model: SchoolEmployee, 
+            as: 'Employee',
+            include: [{ model: EmployeeType, as: 'EmployeeType' }]
+          }
+        ]
+      }],
+      order: [['shift', 'ASC'], ['effective_from', 'DESC']]
+    });
+
+    // Flatten all assignments into a single roster
+    const roster = [];
+    schedules.forEach(schedule => {
+      if (schedule.Assignments && schedule.Assignments.length > 0) {
+        schedule.Assignments.forEach(assignment => {
+          roster.push({
+            shift: schedule.shift,
+            shift_name: schedule.name,
+            day_of_week: assignment.day_of_week,
+            duty_location: assignment.DutyLocation ? {
+              id: assignment.DutyLocation.id,
+              name: assignment.DutyLocation.name,
+              order: assignment.DutyLocation.order
+            } : null,
+            employee: assignment.Employee ? {
+              id: assignment.Employee.id,
+              name: assignment.Employee.name,
+              employee_type: assignment.Employee.EmployeeType ? {
+                id: assignment.Employee.EmployeeType.id,
+                name: assignment.Employee.EmployeeType.name,
+                is_vice_principal: assignment.Employee.EmployeeType.is_vice_principal
+              } : null
+            } : null
+          });
+        });
+      }
+    });
+
+    res.json(roster);
   } catch (err) {
-    await t.rollback();
-    console.error('Delete duty schedule failed', err);
+    console.error('Get duty roster failed', err);
     res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 };

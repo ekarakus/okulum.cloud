@@ -25,6 +25,6 @@ router.get('/:school_id', authenticateToken, addUserSchools, ctrl.getCurrent);
 router.put('/:id', authenticateToken, requireAdminOrSuperAdmin, ctrl.update);
 
 // Delete schedule
-router.delete('/:id', authenticateToken, requireAdminOrSuperAdmin, ctrl.remove);
+// router.delete('/:id', authenticateToken, requireAdminOrSuperAdmin, ctrl.remove);
 
 module.exports = router;

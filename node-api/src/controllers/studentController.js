@@ -4,7 +4,11 @@ exports.listBySchool = async (req, res) => {
   try {
     const schoolId = parseInt(req.params.schoolId, 10);
     if (isNaN(schoolId)) return res.status(400).json({ error: 'Invalid school id' });
-    const rows = await Student.findAll({ where: { school_id: schoolId }, order: [['student_no','ASC']] });
+    const rows = await Student.findAll({
+      where: { school_id: schoolId },
+      attributes: ['student_no', 'first_name', 'last_name', 'class_name', 'birth_date'],
+      order: [['student_no','ASC']]
+    });
     res.json(rows);
   } catch (err) {
     console.error('Student list error', err);
